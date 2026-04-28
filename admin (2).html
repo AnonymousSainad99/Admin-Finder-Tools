@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FireEdge Admin Panel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<style>
+/* ============ ROOT VARIABLES ============ */
+:root{--primary:#6C5CE7;--primary-light:#a29bfe;--secondary:#00CEC9;--accent:#FD79A8;--success:#00b894;--warning:#fdcb6e;--danger:#d63031;--info:#0984e3;--gradient:linear-gradient(135deg,#6C5CE7,#a29bfe);--gradient2:linear-gradient(135deg,#00CEC9,#81ecec);--gradient3:linear-gradient(135deg,#e17055,#d63031);--shadow:0 4px 20px rgba(0,0,0,.3);--radius:14px;--radius-sm:8px;--transition:all .3s cubic-bezier(.4,0,.2,1)}
+[data-theme="dark"]{--bg:#0a0a1a;--bg2:#12122a;--bg3:#0e0e20;--card:#1a1a2e;--card2:#16213e;--card-hover:#1e1e3a;--text:#fff;--text2:#b2bec3;--text3:#636e72;--border:#2d3436;--input-bg:#16213e;--nav-bg:rgba(18,18,42,.97);--sidebar-bg:#0e0e22;--overlay:rgba(0,0,0,.7);--shimmer:linear-gradient(90deg,#1a1a2e 25%,#2d2d4e 50%,#1a1a2e 75%)}
+[data-theme="light"]{--bg:#f0f2f5;--bg2:#fff;--bg3:#e8ecf1;--card:#fff;--card2:#f8f9fa;--card-hover:#f0f0f5;--text:#2d3436;--text2:#636e72;--text3:#b2bec3;--border:#dfe6e9;--input-bg:#f8f9fa;--nav-bg:rgba(255,255,255,.97);--sidebar-bg:#fff;--overlay:rgba(0,0,0,.5);--shimmer:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;min-height:100vh}
+a{text-decoration:none;color:inherit}
+input,select,textarea,button{font-family:inherit;outline:none;border:none}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--primary);border-radius:10px}
+img{max-width:100%}
+
+/* ============ LOADER ============ */
+#fullLoader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;transition:opacity .5s}
+#fullLoader.hide{opacity:0;pointer-events:none}
+.loader-logo{font-size:2rem;font-weight:900;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:20px;animation:pulse 1.5s infinite}
+.loader-spinner{width:44px;height:44px;border:4px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+.loader-text{margin-top:16px;color:var(--text2);font-size:.85rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(15px)}to{opacity:1;transform:translateX(0)}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-4px)}20%,40%,60%,80%{transform:translateX(4px)}}
+
+/* ============ AUTH ============ */
+#authContainer{display:flex;min-height:100vh;background:var(--bg);padding:20px;align-items:center;justify-content:center}
+.auth-box{max-width:420px;width:100%}
+.auth-card{background:var(--card);border-radius:var(--radius);padding:36px 28px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.auth-header{text-align:center;margin-bottom:32px}
+.auth-header .logo-icon{width:70px;height:70px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.8rem}
+.auth-header h1{font-size:1.6rem;font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.auth-header p{color:var(--text2);margin-top:6px;font-size:.85rem}
+.auth-badge{display:inline-block;background:var(--gradient3);color:#fff;padding:4px 16px;border-radius:20px;font-size:.7rem;font-weight:700;margin-top:10px;letter-spacing:1.5px;text-transform:uppercase}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;margin-bottom:6px;font-weight:500;font-size:.82rem;color:var(--text2)}
+.form-input{width:100%;padding:13px 15px;background:var(--input-bg);border:2px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.92rem;transition:var(--transition)}
+.form-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(108,92,231,.2)}
+.form-input::placeholder{color:var(--text3)}
+.form-input.error{border-color:var(--danger);animation:shake .4s}
+.input-icon-wrap{position:relative}
+.input-icon-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text3)}
+.input-icon-wrap input{padding-left:42px}
+.input-icon-wrap .toggle-pass{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text3);cursor:pointer;background:none;font-size:.95rem}
+textarea.form-input{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:500px){.form-row{grid-template-columns:1fr}}
+select.form-input{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23636e72' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.error-msg{color:var(--danger);font-size:.78rem;margin-top:6px;display:none}
+.error-msg.show{display:block}
+
+/* ============ BUTTONS ============ */
+.btn{width:100%;padding:13px;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;cursor:pointer;transition:var(--transition);display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden}
+.btn-primary{background:var(--gradient);color:#fff}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(108,92,231,.4)}
+.btn-secondary{background:var(--card);color:var(--text);border:2px solid var(--border)}
+.btn-secondary:hover{border-color:var(--primary)}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{opacity:.9}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{opacity:.9}
+.btn-warning{background:var(--warning);color:#333}
+.btn-info{background:var(--info);color:#fff}
+.btn-sm{padding:8px 16px;font-size:.82rem;width:auto}
+.btn-xs{padding:5px 11px;font-size:.72rem;width:auto;border-radius:6px}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+.btn .spinner{width:18px;height:18px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+.btn-icon{width:36px;height:36px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.9rem}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ============ MAIN LAYOUT ============ */
+#mainApp{display:none;min-height:100vh}
+.sidebar{position:fixed;top:0;left:0;width:260px;height:100%;background:var(--sidebar-bg);border-right:1px solid var(--border);z-index:1001;overflow-y:auto;transition:transform .3s;padding-bottom:20px}
+.sidebar.closed{transform:translateX(-260px)}
+.sidebar-header{padding:18px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.sidebar-logo{font-size:1.15rem;font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;flex:1}
+.sidebar-close{display:none;width:32px;height:32px;border-radius:50%;background:var(--card);align-items:center;justify-content:center;cursor:pointer;color:var(--text2)}
+.sidebar-admin{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sidebar-admin-avatar{width:42px;height:42px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.9rem;flex-shrink:0}
+.sidebar-admin-info{overflow:hidden}
+.sidebar-admin-info h4{font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-admin-info p{font-size:.68rem;color:var(--text3)}
+.sidebar-nav{padding:10px}
+.nav-section{margin-bottom:4px}
+.nav-section-title{padding:8px 14px;font-size:.62rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px}
+.nav-link{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);font-size:.84rem;font-weight:500;color:var(--text2);margin-bottom:2px;position:relative}
+.nav-link:hover{background:var(--card);color:var(--text)}
+.nav-link.active{background:var(--primary);color:#fff}
+.nav-link.active i{color:#fff}
+.nav-link i{width:20px;text-align:center;font-size:.88rem}
+.nav-link .badge{position:absolute;right:10px;background:var(--danger);color:#fff;font-size:.58rem;padding:2px 7px;border-radius:10px;font-weight:700}
+.main-content{margin-left:260px;min-height:100vh;transition:margin .3s}
+.top-bar{position:sticky;top:0;z-index:999;background:var(--nav-bg);backdrop-filter:blur(15px);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+.top-bar-left{display:flex;align-items:center;gap:12px}
+.menu-toggle{width:36px;height:36px;border-radius:var(--radius-sm);background:var(--card);display:none;align-items:center;justify-content:center;cursor:pointer;color:var(--text);font-size:1rem}
+.top-bar-title{font-size:1.05rem;font-weight:700}
+.top-bar-right{display:flex;align-items:center;gap:10px}
+.top-icon{width:36px;height:36px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:var(--transition);position:relative;font-size:.88rem}
+.top-icon:hover{background:var(--primary);color:#fff}
+.top-icon .dot{position:absolute;top:2px;right:2px;width:8px;height:8px;background:var(--danger);border-radius:50%}
+.content-wrap{padding:20px}
+.page{display:none;animation:fadeIn .3s ease}
+.page.active{display:block}
+
+@media(max-width:900px){
+.sidebar{transform:translateX(-260px)}
+.sidebar.open{transform:translateX(0)}
+.sidebar-close{display:flex}
+.main-content{margin-left:0}
+.menu-toggle{display:flex}
+.sidebar-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--overlay);z-index:1000}
+.sidebar-overlay.show{display:block}
+}
+
+/* ============ STAT CARDS ============ */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:18px;border:1px solid var(--border);transition:var(--transition);position:relative;overflow:hidden}
+.stat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.stat-card::after{content:'';position:absolute;top:-20px;right:-20px;width:60px;height:60px;border-radius:50%;opacity:.1}
+.stat-card.purple::after{background:var(--primary)}
+.stat-card.green::after{background:var(--success)}
+.stat-card.orange::after{background:var(--warning)}
+.stat-card.red::after{background:var(--danger)}
+.stat-card.blue::after{background:var(--info)}
+.stat-card .stat-icon{width:40px;height:40px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:10px}
+.stat-card.purple .stat-icon{background:rgba(108,92,231,.15);color:var(--primary)}
+.stat-card.green .stat-icon{background:rgba(0,184,148,.15);color:var(--success)}
+.stat-card.orange .stat-icon{background:rgba(253,203,110,.15);color:var(--warning)}
+.stat-card.red .stat-icon{background:rgba(214,48,49,.15);color:var(--danger)}
+.stat-card.blue .stat-icon{background:rgba(9,132,227,.15);color:var(--info)}
+.stat-card .stat-val{font-size:1.5rem;font-weight:800}
+.stat-card .stat-label{font-size:.72rem;color:var(--text3);margin-top:2px}
+
+/* ============ COMMON ============ */
+.section-title{font-size:1rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.section-title .right-actions{display:flex;gap:8px;flex-wrap:wrap}
+.card-box{background:var(--card);border-radius:var(--radius);padding:18px;margin-bottom:16px;border:1px solid var(--border)}
+.card-box-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.card-box-header h3{font-size:.95rem;font-weight:700;display:flex;align-items:center;gap:8px}
+.card-box-header h3 i{color:var(--primary)}
+
+/* ============ TABLE ============ */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;min-width:600px}
+thead th{background:var(--bg);padding:10px 12px;text-align:left;font-size:.7rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:10px 12px;font-size:.82rem;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr{transition:var(--transition)}
+tbody tr:hover{background:var(--card-hover)}
+.user-cell{display:flex;align-items:center;gap:8px}
+.user-cell .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.7rem;font-weight:700;flex-shrink:0}
+.user-cell .name{font-weight:600;font-size:.82rem}
+.user-cell .email{font-size:.68rem;color:var(--text3)}
+
+/* ============ BADGES ============ */
+.badge-status{padding:3px 10px;border-radius:20px;font-size:.66rem;font-weight:600;text-transform:uppercase;display:inline-block;white-space:nowrap}
+.badge-status.approved,.badge-status.active,.badge-status.completed{background:rgba(0,184,148,.15);color:var(--success)}
+.badge-status.pending,.badge-status.upcoming{background:rgba(253,203,110,.15);color:var(--warning)}
+.badge-status.rejected,.badge-status.banned,.badge-status.cancelled{background:rgba(214,48,49,.15);color:var(--danger)}
+.badge-status.live{background:rgba(214,48,49,.15);color:var(--danger);animation:pulse 2s infinite}
+.badge-status.premium{background:rgba(108,92,231,.15);color:var(--primary)}
+.badge-status.verified{background:rgba(0,206,201,.15);color:var(--secondary)}
+
+/* ============ FILTER BAR ============ */
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-bar .search-box{flex:1;min-width:200px;position:relative}
+.filter-bar .search-box input{width:100%;padding:10px 14px 10px 38px;background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.85rem}
+.filter-bar .search-box input:focus{border-color:var(--primary)}
+.filter-bar .search-box i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:.85rem}
+.filter-select{padding:10px 30px 10px 12px;background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.82rem;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23636e72' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+
+/* ============ TABS ============ */
+.tab-bar{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab-item{padding:8px 18px;background:var(--card);border-radius:20px;font-size:.79rem;font-weight:600;white-space:nowrap;cursor:pointer;transition:var(--transition);border:1px solid var(--border);color:var(--text2)}
+.tab-item.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* ============ MODAL ============ */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--overlay);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--bg2);border-radius:var(--radius);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:24px;animation:slideUp .3s ease;border:1px solid var(--border)}
+.modal-box-lg{max-width:720px}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-header h3{font-size:1rem;font-weight:700}
+.modal-close{width:32px;height:32px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:var(--transition)}
+.modal-close:hover{background:var(--danger);color:#fff}
+.modal-footer{display:flex;gap:10px;margin-top:20px;justify-content:flex-end;flex-wrap:wrap}
+
+/* ============ TOAST ============ */
+.toast-container{position:fixed;top:16px;right:16px;z-index:99999;display:flex;flex-direction:column;gap:8px;max-width:360px}
+.toast{padding:13px 16px;border-radius:var(--radius-sm);color:#fff;font-size:.84rem;font-weight:500;display:flex;align-items:center;gap:10px;animation:slideIn .3s ease;box-shadow:var(--shadow)}
+.toast.success{background:var(--success)}
+.toast.error{background:var(--danger)}
+.toast.warning{background:var(--warning);color:#333}
+.toast.info{background:var(--info)}
+.toast i{font-size:1rem}
+.toast-close{margin-left:auto;cursor:pointer;opacity:.8}
+
+/* ============ MISC ============ */
+.empty-state{text-align:center;padding:40px 20px}
+.empty-state i{font-size:2.5rem;color:var(--text3);margin-bottom:12px}
+.empty-state h3{font-size:.92rem;font-weight:600;color:var(--text2);margin-bottom:4px}
+.empty-state p{font-size:.76rem;color:var(--text3)}
+.skeleton{background:var(--shimmer);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--radius-sm)}
+.skeleton-card{height:120px;border-radius:var(--radius);margin-bottom:14px}
+.img-preview{max-width:100%;max-height:300px;border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition)}
+.img-preview:hover{opacity:.8}
+.img-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:99999;display:none;align-items:center;justify-content:center;cursor:pointer}
+.img-modal.show{display:flex}
+.img-modal img{max-width:95%;max-height:95%;object-fit:contain;border-radius:var(--radius)}
+.toggle{width:44px;height:24px;background:var(--border);border-radius:12px;position:relative;cursor:pointer;transition:var(--transition)}
+.toggle.on{background:var(--success)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:var(--transition)}
+.toggle.on::after{transform:translateX(20px)}
+.chart-bar{display:flex;align-items:flex-end;gap:6px;height:120px;padding:10px 0}
+.chart-col{flex:1;background:var(--gradient);border-radius:4px 4px 0 0;transition:height .5s;min-width:20px;position:relative;cursor:pointer}
+.chart-col:hover{opacity:.8}
+.chart-col .chart-tip{display:none;position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:var(--card);padding:3px 8px;border-radius:4px;font-size:.63rem;white-space:nowrap;box-shadow:var(--shadow)}
+.chart-col:hover .chart-tip{display:block}
+.chart-labels{display:flex;gap:6px}
+.chart-labels span{flex:1;text-align:center;font-size:.58rem;color:var(--text3)}
+.activity-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.activity-dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.activity-dot.green{background:var(--success)}.activity-dot.red{background:var(--danger)}.activity-dot.blue{background:var(--info)}.activity-dot.orange{background:var(--warning)}.activity-dot.purple{background:var(--primary)}
+.activity-content{flex:1}
+.activity-content p{font-size:.82rem}
+.activity-content span{font-size:.68rem;color:var(--text3)}
+.quick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.settings-row:last-child{border-bottom:none}
+.settings-row .s-label{font-size:.86rem;font-weight:500;display:flex;align-items:center;gap:8px}
+.settings-row .s-label i{color:var(--primary);width:18px;text-align:center}
+.settings-row .s-desc{font-size:.68rem;color:var(--text3);margin-top:2px}
+.settings-input{width:180px;padding:8px 12px;background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.85rem;text-align:right}
+.deposit-card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;border:1px solid var(--border);transition:var(--transition)}
+.deposit-card:hover{border-color:var(--primary)}
+.deposit-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px}
+.deposit-card-body{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.82rem;margin-bottom:10px}
+.deposit-card-body .field{color:var(--text3);font-size:.7rem}
+.deposit-card-body .val{font-weight:600}
+.deposit-card-actions{display:flex;gap:8px;flex-wrap:wrap}
+.session-info{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-top:16px;font-size:.75rem;color:var(--text3);display:flex;align-items:center;gap:8px}
+.session-info i{color:var(--success)}
+
+@media(max-width:600px){
+.stats-grid{grid-template-columns:repeat(2,1fr)}
+.content-wrap{padding:14px}
+.filter-bar{flex-direction:column}
+.form-row{grid-template-columns:1fr}
+.quick-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LOADER ===== -->
+<div id="fullLoader">
+<div class="loader-logo">⚔️ FireEdge</div>
+<div class="loader-spinner"></div>
+<p class="loader-text">Loading Admin Panel...</p>
+</div>
+
+<!-- ===== TOASTS ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== IMAGE MODAL ===== -->
+<div class="img-modal" id="imgModal" onclick="this.classList.remove('show')">
+<img id="imgModalSrc" src="" alt="">
+</div>
+
+<!-- ===== AUTH SCREEN ===== -->
+<div id="authContainer">
+<div class="auth-box">
+<div class="auth-card">
+<div class="auth-header">
+<div class="logo-icon">⚔️</div>
+<h1>FireEdge</h1>
+<p>Admin Control Panel</p>
+<div class="auth-badge"><i class="fas fa-shield-alt"></i> ADMIN ACCESS ONLY</div>
+</div>
+<form onsubmit="handleAdminLogin(event)" id="adminLoginForm">
+<div class="form-group">
+<label><i class="fas fa-envelope" style="margin-right:4px"></i> Admin Email</label>
+<div class="input-icon-wrap">
+<i class="fas fa-envelope"></i>
+<input type="email" class="form-input" id="adminEmailInput" placeholder="Enter Admin Email" required autocomplete="off">
+</div>
+</div>
+<div class="form-group">
+<label><i class="fas fa-lock" style="margin-right:4px"></i> Password</label>
+<div class="input-icon-wrap">
+<i class="fas fa-key"></i>
+<input type="password" class="form-input" id="adminPassInput" placeholder="Enter Password" required>
+<button type="button" class="toggle-pass" onclick="togglePass()"><i class="fas fa-eye" id="passEyeIcon"></i></button>
+</div>
+</div>
+<div class="error-msg" id="loginError"><i class="fas fa-exclamation-circle"></i> <span id="loginErrorText">Invalid credentials</span></div>
+
+<button type="submit" class="btn btn-primary" id="adminLoginBtn" style="margin-top: 15px;">
+<i class="fas fa-sign-in-alt"></i> <span>Login to Panel</span>
+</button>
+</form>
+</div>
+</div>
+</div>
+
+<!-- ===== SIDEBAR OVERLAY ===== -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="mainApp">
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+<div class="sidebar-header">
+<div class="sidebar-logo">⚔️ FireEdge</div>
+<div class="sidebar-close" onclick="toggleSidebar()"><i class="fas fa-times"></i></div>
+</div>
+<div class="sidebar-admin">
+<div class="sidebar-admin-avatar" id="sidebarAvatar">A</div>
+<div class="sidebar-admin-info"><h4 id="sidebarName">Admin</h4><p id="sidebarRole">Administrator</p></div>
+</div>
+<div class="sidebar-nav">
+<div class="nav-section"><div class="nav-section-title">Main</div>
+<div class="nav-link active" onclick="goTo('dashboard')"><i class="fas fa-chart-pie"></i>Dashboard</div>
+<div class="nav-link" onclick="goTo('users')"><i class="fas fa-users"></i>Users<span class="badge" id="navUsersBadge" style="display:none">0</span></div>
+<div class="nav-link" onclick="goTo('tournaments')"><i class="fas fa-trophy"></i>Tournaments</div>
+</div>
+<div class="nav-section"><div class="nav-section-title">Finance</div>
+<div class="nav-link" onclick="goTo('deposits')"><i class="fas fa-download"></i>Deposits<span class="badge" id="navDepositBadge" style="display:none">0</span></div>
+<div class="nav-link" onclick="goTo('withdrawals')"><i class="fas fa-upload"></i>Withdrawals<span class="badge" id="navWithdrawBadge" style="display:none">0</span></div>
+<div class="nav-link" onclick="goTo('transactions')"><i class="fas fa-exchange-alt"></i>Transactions</div>
+</div>
+<div class="nav-section"><div class="nav-section-title">Marketing</div>
+<div class="nav-link" onclick="goTo('promos')"><i class="fas fa-ticket-alt"></i>Promo Codes</div>
+<div class="nav-link" onclick="goTo('referrals')"><i class="fas fa-gift"></i>Referrals</div>
+<div class="nav-link" onclick="goTo('announcements')"><i class="fas fa-bullhorn"></i>Announcements</div>
+<div class="nav-link" onclick="goTo('notifications')"><i class="fas fa-bell"></i>Push Notify</div>
+</div>
+<div class="nav-section"><div class="nav-section-title">Operations</div>
+<div class="nav-link" onclick="goTo('reports')"><i class="fas fa-flag"></i>Cheat Reports<span class="badge" id="navReportBadge" style="display:none">0</span></div>
+<div class="nav-link" onclick="goTo('staff')"><i class="fas fa-user-shield"></i>Staff</div>
+<div class="nav-link" onclick="goTo('analytics')"><i class="fas fa-chart-bar"></i>Analytics</div>
+</div>
+<div class="nav-section"><div class="nav-section-title">System</div>
+<div class="nav-link" onclick="goTo('settings')"><i class="fas fa-cog"></i>Settings</div>
+<div class="nav-link" onclick="goTo('security')"><i class="fas fa-shield-alt"></i>Security</div>
+<div class="nav-link" onclick="goTo('backup')"><i class="fas fa-database"></i>Backup</div>
+<div class="nav-link" onclick="adminLogout()" style="color:var(--danger)"><i class="fas fa-sign-out-alt"></i>Logout</div>
+</div>
+</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-content" id="mainContent">
+<div class="top-bar">
+<div class="top-bar-left">
+<div class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></div>
+<div class="top-bar-title" id="topBarTitle">Dashboard</div>
+</div>
+<div class="top-bar-right">
+<div class="top-icon" onclick="toggleTheme()"><i class="fas fa-moon" id="themeIcon"></i></div>
+<div class="top-icon" onclick="goTo('deposits')"><i class="fas fa-bell"></i><span class="dot" id="topDot" style="display:none"></span></div>
+<div class="top-icon" onclick="adminLogout()" title="Logout"><i class="fas fa-sign-out-alt"></i></div>
+</div>
+</div>
+<div class="content-wrap" id="contentWrap">
+
+<!-- ===== DASHBOARD ===== -->
+<div class="page active" id="pg_dashboard">
+<div class="stats-grid" id="dashStats"></div>
+<div class="quick-grid">
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-download"></i>Pending Deposits</h3><span class="badge-status pending" id="pendingDepCount">0</span></div><div id="dashPendingDeposits"></div></div>
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-upload"></i>Pending Withdrawals</h3><span class="badge-status pending" id="pendingWithCount">0</span></div><div id="dashPendingWithdrawals"></div></div>
+</div>
+<div class="card-box" style="margin-top:14px"><div class="card-box-header"><h3><i class="fas fa-chart-bar"></i>Revenue (7 Days)</h3></div><div class="chart-bar" id="revenueChart"></div><div class="chart-labels" id="revenueLabels"></div></div>
+<div class="card-box" style="margin-top:14px"><div class="card-box-header"><h3><i class="fas fa-clock"></i>Recent Activity</h3></div><div id="dashActivity"></div></div>
+</div>
+
+<!-- ===== USERS ===== -->
+<div class="page" id="pg_users">
+<div class="filter-bar">
+<div class="search-box"><i class="fas fa-search"></i><input type="text" id="userSearch" placeholder="Search name, email, UID..." oninput="renderUsers()"></div>
+<select class="filter-select" id="userFilter" onchange="renderUsers()"><option value="all">All Users</option><option value="active">Active</option><option value="banned">Banned</option><option value="premium">Premium</option><option value="verified">Verified</option></select>
+<button class="btn btn-sm btn-primary" onclick="exportUsersCSV()"><i class="fas fa-download"></i>Export</button>
+</div>
+<div class="card-box"><div class="table-wrap"><table><thead><tr><th>User</th><th>Phone</th><th>Game UID</th><th>Balance</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="usersTableBody"></tbody></table></div></div>
+</div>
+
+<!-- ===== TOURNAMENTS ===== -->
+<div class="page" id="pg_tournaments">
+<div class="section-title"><span>Tournaments</span><div class="right-actions"><button class="btn btn-sm btn-primary" onclick="openCreateTournament()"><i class="fas fa-plus"></i>Create</button></div></div>
+<div class="tab-bar" id="tournamentTabs">
+<div class="tab-item active" onclick="filterTournaments('all',this)">All</div>
+<div class="tab-item" onclick="filterTournaments('upcoming',this)">Upcoming</div>
+<div class="tab-item" onclick="filterTournaments('live',this)">Live</div>
+<div class="tab-item" onclick="filterTournaments('completed',this)">Completed</div>
+</div>
+<div id="tournamentsGrid"></div>
+</div>
+
+<!-- ===== DEPOSITS ===== -->
+<div class="page" id="pg_deposits">
+<div class="section-title"><span>Deposit Requests</span></div>
+<div class="tab-bar"><div class="tab-item active" onclick="filterDeposits('pending',this)">Pending</div><div class="tab-item" onclick="filterDeposits('approved',this)">Approved</div><div class="tab-item" onclick="filterDeposits('rejected',this)">Rejected</div><div class="tab-item" onclick="filterDeposits('all',this)">All</div></div>
+<div id="depositsList"></div>
+</div>
+
+<!-- ===== WITHDRAWALS ===== -->
+<div class="page" id="pg_withdrawals">
+<div class="section-title"><span>Withdrawal Requests</span></div>
+<div class="tab-bar"><div class="tab-item active" onclick="filterWithdrawals('pending',this)">Pending</div><div class="tab-item" onclick="filterWithdrawals('approved',this)">Approved</div><div class="tab-item" onclick="filterWithdrawals('rejected',this)">Rejected</div><div class="tab-item" onclick="filterWithdrawals('all',this)">All</div></div>
+<div id="withdrawalsList"></div>
+</div>
+
+<!-- ===== TRANSACTIONS ===== -->
+<div class="page" id="pg_transactions">
+<div class="filter-bar"><div class="search-box"><i class="fas fa-search"></i><input type="text" id="txSearch" placeholder="Search..." oninput="searchTransactions()"></div><button class="btn btn-sm btn-info" onclick="exportTransactionsCSV()"><i class="fas fa-download"></i>Export</button></div>
+<div class="card-box"><div class="table-wrap"><table><thead><tr><th>User</th><th>Type</th><th>Amount</th><th>Description</th><th>Status</th><th>Date</th></tr></thead><tbody id="txTableBody"></tbody></table></div></div>
+</div>
+
+<!-- ===== PROMOS ===== -->
+<div class="page" id="pg_promos">
+<div class="section-title"><span>Promo Codes</span><div class="right-actions"><button class="btn btn-sm btn-primary" onclick="openCreatePromo()"><i class="fas fa-plus"></i>Create</button></div></div>
+<div id="promosList"></div>
+</div>
+
+<!-- ===== REFERRALS ===== -->
+<div class="page" id="pg_referrals">
+<div class="stats-grid" id="refStats"></div>
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-cog"></i>Referral Settings</h3></div>
+<div class="settings-row"><div class="s-label"><i class="fas fa-coins"></i>Referral Bonus (₹)</div><input type="number" class="settings-input" id="refBonusInput" value="10" onchange="saveRefBonus()"></div></div>
+<div class="card-box" style="margin-top:14px"><div class="card-box-header"><h3><i class="fas fa-list"></i>Top Referrers</h3></div><div id="topReferrers"></div></div>
+</div>
+
+<!-- ===== ANNOUNCEMENTS ===== -->
+<div class="page" id="pg_announcements">
+<div class="section-title"><span>Announcements</span><div class="right-actions"><button class="btn btn-sm btn-primary" onclick="openCreateAnnouncement()"><i class="fas fa-plus"></i>Create</button></div></div>
+<div id="announcementsList"></div>
+</div>
+
+<!-- ===== NOTIFICATIONS ===== -->
+<div class="page" id="pg_notifications">
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-bell"></i>Send Push Notification</h3></div>
+<div class="form-group"><label>Title</label><input type="text" class="form-input" id="pushTitle" placeholder="Notification title"></div>
+<div class="form-group"><label>Message</label><textarea class="form-input" id="pushMessage" placeholder="Message" rows="3"></textarea></div>
+<div class="form-group"><label>Send To</label><select class="form-input" id="pushTarget" onchange="document.getElementById('pushUserIdGroup').style.display=this.value==='specific'?'block':'none'"><option value="all">All Users</option><option value="specific">Specific User</option></select></div>
+<div class="form-group" id="pushUserIdGroup" style="display:none"><label>User ID</label><input type="text" class="form-input" id="pushUserId" placeholder="Enter user UID"></div>
+<div class="form-group"><label>Type</label><select class="form-input" id="pushType"><option value="system">System</option><option value="payment">Payment</option><option value="match">Match</option><option value="result">Result</option></select></div>
+<button class="btn btn-primary" onclick="sendPushNotification()" id="sendPushBtn"><i class="fas fa-paper-plane"></i>Send Notification</button></div>
+</div>
+
+<!-- ===== REPORTS ===== -->
+<div class="page" id="pg_reports">
+<div class="section-title"><span>Cheat Reports</span></div>
+<div class="tab-bar"><div class="tab-item active" onclick="filterReports('pending',this)">Pending</div><div class="tab-item" onclick="filterReports('reviewed',this)">Reviewed</div><div class="tab-item" onclick="filterReports('all',this)">All</div></div>
+<div id="reportsList"></div>
+</div>
+
+<!-- ===== STAFF ===== -->
+<div class="page" id="pg_staff">
+<div class="section-title"><span>Staff Management</span><div class="right-actions"><button class="btn btn-sm btn-primary" onclick="openCreateStaff()"><i class="fas fa-plus"></i>Add Staff</button></div></div>
+<div id="staffList"></div>
+</div>
+
+<!-- ===== ANALYTICS ===== -->
+<div class="page" id="pg_analytics">
+<div class="stats-grid" id="analyticsStats"></div>
+<div class="quick-grid">
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-user-plus"></i>User Growth (7 Days)</h3></div><div class="chart-bar" id="userGrowthChart"></div><div class="chart-labels" id="userGrowthLabels"></div></div>
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-gamepad"></i>Tournament Stats</h3></div><div id="tournamentAnalytics"></div></div>
+</div>
+<div class="card-box" style="margin-top:14px"><div class="card-box-header"><h3><i class="fas fa-money-bill"></i>Earnings Report</h3><button class="btn btn-xs btn-info" onclick="exportEarningsCSV()"><i class="fas fa-download"></i>Export</button></div><div id="earningsReport"></div></div>
+</div>
+
+<!-- ===== SETTINGS ===== -->
+<div class="page" id="pg_settings">
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-money-bill"></i>Payment Settings</h3><button class="btn btn-xs btn-primary" onclick="savePaymentSettings()" id="savePayBtn">Save</button></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-qrcode"></i>UPI ID</div><div class="s-desc">UPI ID shown to users</div></div><input type="text" class="settings-input" id="setUpiId" placeholder="example@upi"></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-user"></i>UPI Name</div></div><input type="text" class="settings-input" id="setUpiName" placeholder="Name"></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-arrow-down"></i>Min Deposit (₹)</div></div><input type="number" class="settings-input" id="setMinDeposit" value="10"></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-arrow-up"></i>Min Withdraw (₹)</div></div><input type="number" class="settings-input" id="setMinWithdraw" value="50"></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-percentage"></i>Commission (%)</div></div><input type="number" class="settings-input" id="setCommission" value="5"></div>
+</div>
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-cog"></i>App Settings</h3><button class="btn btn-xs btn-primary" onclick="saveAppSettings()" id="saveAppBtn">Save</button></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-wrench"></i>Maintenance Mode</div><div class="s-desc">Users see maintenance message</div></div><div class="toggle" id="toggleMaintenance" onclick="toggleSetting('maintenance',this)"></div></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-user-plus"></i>Registration Open</div></div><div class="toggle on" id="toggleRegistration" onclick="toggleSetting('registration',this)"></div></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-ad"></i>Enable Ads</div></div><div class="toggle" id="toggleAds" onclick="toggleSetting('ads',this)"></div></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-mobile-alt"></i>App Version</div></div><input type="text" class="settings-input" id="setAppVersion" value="1.0.0"></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-comment"></i>Update Message</div></div><input type="text" class="settings-input" id="setUpdateMsg" placeholder="Update message"></div>
+</div>
+</div>
+
+<!-- ===== SECURITY ===== -->
+<div class="page" id="pg_security">
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-shield-alt"></i>Security Controls</h3></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-lock"></i>Force 2FA</div></div><div class="toggle" id="toggle2FA" onclick="toggleSetting('force2FA',this)"></div></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-ban"></i>Auto Ban Strikes</div></div><input type="number" class="settings-input" id="setAutoBanStrikes" value="3" onchange="saveSecuritySetting('autoBanStrikes',this.value)"></div>
+<div class="settings-row"><div><div class="s-label"><i class="fas fa-exclamation-triangle"></i>Fraud Detection</div></div><div class="toggle on" id="toggleFraud" onclick="toggleSetting('fraudDetection',this)"></div></div>
+</div>
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-history"></i>Admin Activity Log</h3></div><div id="adminActivityLog"></div></div>
+</div>
+
+<!-- ===== BACKUP ===== -->
+<div class="page" id="pg_backup">
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-database"></i>Database Management</h3></div>
+<p style="font-size:.85rem;color:var(--text2);margin-bottom:16px">Manage Firebase database backups.</p>
+<div class="btn-group"><button class="btn btn-sm btn-info" onclick="exportFullData()"><i class="fas fa-download"></i>Export All (JSON)</button><button class="btn btn-sm btn-warning" onclick="showEmergencyModal()"><i class="fas fa-exclamation-triangle"></i>Emergency Mode</button></div></div>
+<div class="card-box"><div class="card-box-header"><h3><i class="fas fa-tools"></i>Tools</h3></div>
+<div class="btn-group" style="flex-wrap:wrap"><button class="btn btn-xs btn-secondary" onclick="cleanOldData('deposits')"><i class="fas fa-broom"></i>Clean Old Deposits</button><button class="btn btn-xs btn-secondary" onclick="cleanOldData('notifications')"><i class="fas fa-broom"></i>Clean Notifications</button><button class="btn btn-xs btn-secondary" onclick="recalcAllWallets()"><i class="fas fa-calculator"></i>Recalc Wallets</button></div></div>
+</div>
+
+</div></div></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+<div class="modal-box" id="modalBox" onclick="event.stopPropagation()">
+<div class="modal-header"><h3 id="modalTitle">Modal</h3><div class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></div></div>
+<div id="modalBody"></div>
+</div>
+</div>
+
+<script>
+/* ==========================================================
+   FIREBASE - AUTH & DATABASE INITIALIZATION
+   ========================================================== */
+const firebaseConfig={apiKey:"AIzaSyBecuq9MAcu30-pBcUv34AEOsjVPP2R8v8",authDomain:"turnament-11eb1.firebaseapp.com",databaseURL:"https://turnament-11eb1-default-rtdb.firebaseio.com",projectId:"turnament-11eb1",storageBucket:"turnament-11eb1.firebasestorage.app",messagingSenderId:"673619098102",appId:"1:673619098102:web:5dd4fc1cce4db9a92f6fd7",measurementId:"G-VCZXBJDFY1"};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+// ==== YAHAN AAPKA UNIQUE ADMIN UID HAI ====
+const SUPER_ADMIN_UID = "WcSIUntL0wXhRm24Q8evOFlMVQt1";
+
+/* ==========================================================
+   GLOBALS
+   ========================================================== */
+let adminSession=null; // {key, adminId, name, role}
+let allUsers={},allTournaments={},allDeposits={},allWithdrawals={},allReports={};
+let currentPage='dashboard';
+let depositFilter='pending',withdrawFilter='pending',reportFilter='pending',tournamentFilter='all';
+let listeners=[];
+const IMGBB_KEY='4c71e27b9a1fe0153be278e083c3a2c8';
+
+/* ==========================================================
+   UTILITY FUNCTIONS
+   ========================================================== */
+function showToast(m,t='info',d=3500){
+const ic={success:'fa-check-circle',error:'fa-times-circle',warning:'fa-exclamation-triangle',info:'fa-info-circle'};
+const el=document.createElement('div');el.className='toast '+t;
+el.innerHTML='<i class="fas '+ic[t]+'"></i><span>'+m+'</span><span class="toast-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></span>';
+document.getElementById('toastContainer').appendChild(el);
+setTimeout(function(){el.style.opacity='0';setTimeout(function(){el.remove()},300)},d);
+}
+function showLoader(id){var b=document.getElementById(id);if(!b)return;b.disabled=true;b._o=b.innerHTML;b.innerHTML='<div class="spinner"></div>'}
+function hideLoader(id){var b=document.getElementById(id);if(!b)return;b.disabled=false;b.innerHTML=b._o||''}
+function fmtDate(ts){if(!ts)return'-';return new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+function fmtShort(ts){if(!ts)return'-';return new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}
+function emptyState(i,t,d){return '<div class="empty-state"><i class="fas '+i+'"></i><h3>'+t+'</h3><p>'+(d||'')+'</p></div>'}
+function skeleton(n){var h='';for(var i=0;i<(n||2);i++)h+='<div class="skeleton skeleton-card"></div>';return h}
+function copyText(t){
+try{
+var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';
+document.body.appendChild(a);a.select();document.execCommand('copy');document.body.removeChild(a);
+showToast('Copied!','success');
+}catch(e){showToast('Copy failed','error')}
+}
+function viewImage(url){if(!url)return;document.getElementById('imgModalSrc').src=url;document.getElementById('imgModal').classList.add('show')}
+
+function logActivity(action,details){
+if(!adminSession)return;
+db.ref('adminLogs').push({admin:adminSession.name||adminSession.adminId,adminKey:adminSession.key,action:action,details:details||'',timestamp:Date.now()});
+}
+
+/* ==========================================================
+   FIREBASE AUTHENTICATION BASED LOGIN SYSTEM
+   ========================================================== */
+
+function togglePass(){
+var inp=document.getElementById('adminPassInput');
+var ico=document.getElementById('passEyeIcon');
+if(inp.type==='password'){inp.type='text';ico.className='fas fa-eye-slash'}
+else{inp.type='password';ico.className='fas fa-eye'}
+}
+
+async function handleAdminLogin(e){
+    e.preventDefault();
+    var email = document.getElementById('adminEmailInput').value.trim();
+    var password = document.getElementById('adminPassInput').value;
+    var errorEl = document.getElementById('loginError');
+    var errorText = document.getElementById('loginErrorText');
+    errorEl.classList.remove('show');
+
+    if(!email || !password){
+        errorText.textContent = 'Please enter Email and Password';
+        errorEl.classList.add('show');
+        document.getElementById('adminEmailInput').classList.add('error');
+        setTimeout(function(){document.getElementById('adminEmailInput').classList.remove('error')},500);
+        return;
+    }
+
+    showLoader('adminLoginBtn');
+
+    try {
+        // Firebase Auth se sign in
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+
+        // Verify if it's the specific SUPER_ADMIN_UID
+        if(user.uid !== SUPER_ADMIN_UID) {
+            await auth.signOut(); // Kick them out instantly
+            throw new Error("Unauthorized Access: You are not the Admin!");
+        }
+
+        // Session Variables Set
+        adminSession = {
+            key: user.uid,
+            adminId: user.email,
+            name: 'Super Admin',
+            role: 'superadmin',
+            loginTime: Date.now()
+        };
+
+        logActivity('Admin Login', 'Logged in securely');
+        showToast('Welcome back, Admin!', 'success');
+        showMainApp();
+
+    } catch(err) {
+        errorText.textContent = err.message;
+        errorEl.classList.add('show');
+        document.getElementById('adminEmailInput').classList.add('error');
+        document.getElementById('adminPassInput').classList.add('error');
+        setTimeout(function(){
+            document.getElementById('adminEmailInput').classList.remove('error');
+            document.getElementById('adminPassInput').classList.remove('error');
+        },500);
+    }
+    hideLoader('adminLoginBtn');
+}
+
+function showMainApp(){
+    document.getElementById('authContainer').style.display='none';
+    document.getElementById('mainApp').style.display='block';
+    document.getElementById('sidebarName').textContent = adminSession.name || 'Admin';
+    document.getElementById('sidebarRole').textContent = adminSession.role || 'Administrator';
+    document.getElementById('sidebarAvatar').textContent = 'A';
+    initAdmin();
+}
+
+function showAuthScreen(){
+    document.getElementById('authContainer').style.display='flex';
+    document.getElementById('mainApp').style.display='none';
+}
+
+function adminLogout(){
+    if(!confirm('Are you sure you want to logout?')) return;
+    logActivity('Admin Logout');
+    auth.signOut().then(() => {
+        adminSession = null;
+        detachAll();
+        showAuthScreen();
+        showToast('Logged out successfully', 'info');
+    }).catch(err => {
+        showToast(err.message, 'error');
+    });
+}
+
+// CHECK SESSION ON PAGE LOAD (Firebase handles this automatically)
+function checkSession(){
+    auth.onAuthStateChanged(user => {
+        if (user && user.uid === SUPER_ADMIN_UID) {
+            // Yes, correct admin is already logged in
+            adminSession = {
+                key: user.uid,
+                adminId: user.email,
+                name: 'Super Admin',
+                role: 'superadmin'
+            };
+            showMainApp();
+        } else {
+            // Someone else or no one is logged in
+            if(user) auth.signOut(); // Just in case a normal user tries to bypass
+            showAuthScreen();
+        }
+        setTimeout(function(){document.getElementById('fullLoader').classList.add('hide')},500);
+    });
+}
+
+/* ==========================================================
+   INIT
+   ========================================================== */
+function initAdmin(){
+setupListeners();
+goTo('dashboard');
+loadSettingsData();
+var t=localStorage.getItem('bz_admin_theme')||'dark';
+document.documentElement.setAttribute('data-theme',t);
+document.getElementById('themeIcon').className=t==='dark'?'fas fa-moon':'fas fa-sun';
+}
+
+function detachAll(){listeners.forEach(function(l){l.ref.off(l.ev)});listeners=[]}
+
+function setupListeners(){
+var refs=[
+{path:'users',cb:function(s){allUsers=s.val()||{};if(currentPage==='dashboard')loadDashboard();if(currentPage==='users')renderUsers();if(currentPage==='analytics')loadAnalytics()}},
+{path:'tournaments',cb:function(s){allTournaments=s.val()||{};if(currentPage==='dashboard')loadDashboard();if(currentPage==='tournaments')renderTournaments()}},
+{path:'deposits',cb:function(s){allDeposits=s.val()||{};updatePendingBadges();if(currentPage==='dashboard')loadDashboard();if(currentPage==='deposits')renderDeposits()}},
+{path:'withdrawals',cb:function(s){allWithdrawals=s.val()||{};updatePendingBadges();if(currentPage==='dashboard')loadDashboard();if(currentPage==='withdrawals')renderWithdrawals()}},
+{path:'reports',cb:function(s){allReports=s.val()||{};updatePendingBadges();if(currentPage==='reports')renderReports()}}
+];
+refs.forEach(function(r){var ref=db.ref(r.path);ref.on('value',r.cb);listeners.push({ref:ref,ev:'value'})});
+}
+
+function updatePendingBadges(){
+var pd=0,pw=0,pr=0;
+Object.values(allDeposits).forEach(function(d){if(d.status==='pending')pd++});
+Object.values(allWithdrawals).forEach(function(w){if(w.status==='pending')pw++});
+Object.values(allReports).forEach(function(r){if(r.status==='pending')pr++});
+setBadge('navDepositBadge',pd);setBadge('navWithdrawBadge',pw);setBadge('navReportBadge',pr);
+document.getElementById('topDot').style.display=(pd+pw)>0?'block':'none';
+document.getElementById('pendingDepCount').textContent=pd;
+document.getElementById('pendingWithCount').textContent=pw;
+}
+function setBadge(id,n){var e=document.getElementById(id);if(!e)return;if(n>0){e.style.display='inline';e.textContent=n}else{e.style.display='none'}}
+
+/* ==========================================================
+   NAVIGATION
+   ========================================================== */
+var pageTitles={dashboard:'Dashboard',users:'User Management',tournaments:'Tournaments',deposits:'Deposit Requests',withdrawals:'Withdrawal Requests',transactions:'All Transactions',promos:'Promo Codes',referrals:'Referral System',announcements:'Announcements',notifications:'Push Notifications',reports:'Cheat Reports',staff:'Staff Management',analytics:'Analytics & Reports',settings:'Settings',security:'Security',backup:'Database & Backup'};
+
+function goTo(page){
+document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+var el=document.getElementById('pg_'+page);if(el)el.classList.add('active');
+document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active')});
+document.querySelectorAll('.nav-link').forEach(function(l){
+var oc=l.getAttribute('onclick');
+if(oc&&oc.indexOf("'"+page+"'")!==-1)l.classList.add('active');
+});
+document.getElementById('topBarTitle').textContent=pageTitles[page]||page;
+currentPage=page;
+loadPageData(page);
+if(window.innerWidth<=900){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('show')}
+window.scrollTo(0,0);
+}
+
+function loadPageData(p){
+switch(p){
+case'dashboard':loadDashboard();break;case'users':renderUsers();break;case'tournaments':renderTournaments();break;
+case'deposits':renderDeposits();break;case'withdrawals':renderWithdrawals();break;case'transactions':loadAllTransactions();break;
+case'promos':loadPromos();break;case'referrals':loadReferrals();break;case'announcements':loadAnnouncements();break;
+case'reports':renderReports();break;case'staff':loadStaff();break;case'analytics':loadAnalytics();break;
+case'settings':loadSettingsData();break;case'security':loadSecurity();break;
+}
+}
+
+function toggleSidebar(){
+document.getElementById('sidebar').classList.toggle('open');
+document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+
+function toggleTheme(){
+var c=document.documentElement.getAttribute('data-theme');
+var n=c==='dark'?'light':'dark';
+document.documentElement.setAttribute('data-theme',n);
+localStorage.setItem('bz_admin_theme',n);
+document.getElementById('themeIcon').className=n==='dark'?'fas fa-moon':'fas fa-sun';
+}
+
+/* ==========================================================
+   MODAL
+   ========================================================== */
+function openModal(title,body,large){
+document.getElementById('modalTitle').textContent=title;
+document.getElementById('modalBody').innerHTML=body;
+document.getElementById('modalBox').classList.toggle('modal-box-lg',!!large);
+document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(e){if(e&&e.target!==e.currentTarget)return;document.getElementById('modalOverlay').classList.remove('show')}
+
+/* ==========================================================
+   DASHBOARD
+   ========================================================== */
+function loadDashboard(){
+var totalUsers=Object.keys(allUsers).length;
+var totalTournaments=Object.keys(allTournaments).length;
+var totalRevenue=0,pendingDep=0,pendingWith=0,todayDep=0;
+var today=new Date();today.setHours(0,0,0,0);var todayTs=today.getTime();
+Object.values(allDeposits).forEach(function(d){
+if(d.status==='approved')totalRevenue+=(d.amount||0);
+if(d.status==='pending')pendingDep++;
+if(d.status==='approved'&&d.timestamp>=todayTs)todayDep+=(d.amount||0);
+});
+Object.values(allWithdrawals).forEach(function(w){if(w.status==='pending')pendingWith++});
+
+document.getElementById('dashStats').innerHTML=
+'<div class="stat-card purple"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-val">'+totalUsers+'</div><div class="stat-label">Total Users</div></div>'+
+'<div class="stat-card green"><div class="stat-icon"><i class="fas fa-trophy"></i></div><div class="stat-val">'+totalTournaments+'</div><div class="stat-label">Tournaments</div></div>'+
+'<div class="stat-card orange"><div class="stat-icon"><i class="fas fa-rupee-sign"></i></div><div class="stat-val">₹'+totalRevenue+'</div><div class="stat-label">Total Revenue</div></div>'+
+'<div class="stat-card red"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-val">'+pendingDep+'</div><div class="stat-label">Pending Deposits</div></div>'+
+'<div class="stat-card blue"><div class="stat-icon"><i class="fas fa-upload"></i></div><div class="stat-val">'+pendingWith+'</div><div class="stat-label">Pending Withdrawals</div></div>'+
+'<div class="stat-card green"><div class="stat-icon"><i class="fas fa-calendar-day"></i></div><div class="stat-val">₹'+todayDep+'</div><div class="stat-label">Today Deposits</div></div>';
+
+var pdArr=Object.entries(allDeposits).filter(function(e){return e[1].status==='pending'}).sort(function(a,b){return(b[1].timestamp||0)-(a[1].timestamp||0)}).slice(0,5);
+document.getElementById('dashPendingDeposits').innerHTML=pdArr.length?pdArr.map(function(e){var id=e[0],d=e[1];
+return '<div class="activity-item"><div class="activity-dot orange"></div><div class="activity-content"><p><strong>'+(d.userName||'User')+'</strong> — ₹'+d.amount+'</p><span>'+fmtDate(d.timestamp)+'</span></div><button class="btn btn-xs btn-success" onclick="quickApproveDeposit(\''+id+'\')"><i class="fas fa-check"></i></button></div>';
+}).join(''):emptyState('fa-inbox','No pending deposits','');
+
+var pwArr=Object.entries(allWithdrawals).filter(function(e){return e[1].status==='pending'}).sort(function(a,b){return(b[1].timestamp||0)-(a[1].timestamp||0)}).slice(0,5);
+document.getElementById('dashPendingWithdrawals').innerHTML=pwArr.length?pwArr.map(function(e){var id=e[0],w=e[1];
+return '<div class="activity-item"><div class="activity-dot red"></div><div class="activity-content"><p><strong>'+(w.userName||'User')+'</strong> — ₹'+w.amount+' → '+(w.upiId||'')+'</p><span>'+fmtDate(w.timestamp)+'</span></div><button class="btn btn-xs btn-success" onclick="approveWithdrawal(\''+id+'\')"><i class="fas fa-check"></i></button></div>';
+}).join(''):emptyState('fa-inbox','No pending withdrawals','');
+
+loadRevenueChart();
+loadRecentActivity();
+}
+
+function loadRevenueChart(){
+var days=[],labels=[];
+for(var i=6;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);d.setHours(0,0,0,0);days.push({start:d.getTime(),end:d.getTime()+86400000});labels.push(fmtShort(d.getTime()))}
+var vals=days.map(function(day){var total=0;Object.values(allDeposits).forEach(function(d){if(d.status==='approved'&&d.timestamp>=day.start&&d.timestamp<day.end)total+=(d.amount||0)});return total});
+var max=Math.max.apply(null,vals.concat([1]));
+document.getElementById('revenueChart').innerHTML=vals.map(function(v){return '<div class="chart-col" style="height:'+Math.max((v/max)*100,5)+'%"><div class="chart-tip">₹'+v+'</div></div>'}).join('');
+document.getElementById('revenueLabels').innerHTML=labels.map(function(l){return '<span>'+l+'</span>'}).join('');
+}
+
+function loadRecentActivity(){
+var c=document.getElementById('dashActivity');
+db.ref('adminLogs').orderByChild('timestamp').limitToLast(10).once('value',function(s){
+if(!s.exists()){c.innerHTML=emptyState('fa-clock','No activity yet','');return}
+var arr=[];s.forEach(function(x){arr.push(x.val())});arr.reverse();
+c.innerHTML=arr.map(function(a){return '<div class="activity-item"><div class="activity-dot purple"></div><div class="activity-content"><p>'+a.action+' <span style="color:var(--text3);font-size:.7rem">'+(a.details||'')+'</span></p><span>'+fmtDate(a.timestamp)+' • '+(a.admin||'')+'</span></div></div>'}).join('');
+});
+}
+
+/* ==========================================================
+   USERS
+   ========================================================== */
+function renderUsers(){
+var filter=document.getElementById('userFilter').value;
+var search=(document.getElementById('userSearch').value||'').toLowerCase();
+var tbody=document.getElementById('usersTableBody');
+var rows='';
+Object.entries(allUsers).forEach(function(entry){
+var uid=entry[0],u=entry[1];
+var p=u.profile||{},w=u.wallet||{};
+var banned=p.banned===true,premium=p.premium===true,verified=p.verified===true;
+if(filter==='banned'&&!banned)return;if(filter==='active'&&banned)return;
+if(filter==='premium'&&!premium)return;if(filter==='verified'&&!verified)return;
+if(search&&(p.name||'').toLowerCase().indexOf(search)===-1&&(p.email||'').toLowerCase().indexOf(search)===-1&&uid.toLowerCase().indexOf(search)===-1&&(p.gameUID||'').toLowerCase().indexOf(search)===-1)return;
+var init=(p.name||'U')[0].toUpperCase();
+var badges='';
+if(banned)badges+='<span class="badge-status banned">Banned</span> ';
+if(premium)badges+='<span class="badge-status premium">Premium</span> ';
+if(verified)badges+='<span class="badge-status verified">Verified</span> ';
+rows+='<tr><td><div class="user-cell"><div class="avatar">'+init+'</div><div><div class="name">'+(p.name||'User')+' '+badges+'</div><div class="email">'+(p.email||'')+'</div></div></div></td>'+
+'<td>'+(p.phone||'-')+'</td><td>'+(p.gameUID||'-')+'</td><td style="font-weight:700;color:var(--success)">₹'+(w.balance||0)+'</td>'+
+'<td>'+(banned?'<span class="badge-status banned">Banned</span>':'<span class="badge-status active">Active</span>')+'</td>'+
+'<td>'+fmtDate(p.createdAt)+'</td>'+
+'<td><div class="btn-group"><button class="btn-icon btn-sm btn-secondary" onclick="openUserDetail(\''+uid+'\')" title="View"><i class="fas fa-eye"></i></button>'+
+'<button class="btn-icon btn-sm '+(banned?'btn-success':'btn-danger')+'" onclick="toggleBan(\''+uid+'\','+banned+')" title="'+(banned?'Unban':'Ban')+'"><i class="fas '+(banned?'fa-unlock':'fa-ban')+'"></i></button>'+
+'<button class="btn-icon btn-sm btn-info" onclick="openWalletAdjust(\''+uid+'\')" title="Wallet"><i class="fas fa-wallet"></i></button></div></td></tr>';
+});
+tbody.innerHTML=rows||'<tr><td colspan="7">'+emptyState('fa-users','No users found','')+'</td></tr>';
+}
+
+function openUserDetail(uid){
+var u=allUsers[uid];if(!u)return;
+var p=u.profile||{},w=u.wallet||{},s=u.stats||{};
+openModal('User Details',
+'<div style="text-align:center;margin-bottom:16px">'+
+'<div style="width:60px;height:60px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;font-weight:700;margin:0 auto 10px">'+(p.name||'U')[0].toUpperCase()+'</div>'+
+'<h3>'+(p.name||'User')+'</h3><p style="color:var(--text3);font-size:.82rem">'+(p.email||'')+'</p>'+
+(p.premium?'<span class="badge-status premium">Premium</span> ':'')+
+(p.verified?'<span class="badge-status verified">Verified</span> ':'')+
+(p.banned?'<span class="badge-status banned">Banned</span>':'')+
+'</div>'+
+'<div class="settings-row"><div class="s-label">UID</div><span style="font-size:.75rem;color:var(--text3);cursor:pointer" onclick="copyText(\''+uid+'\')">'+uid.substring(0,20)+'... <i class="fas fa-copy"></i></span></div>'+
+'<div class="settings-row"><div class="s-label">Phone</div><span>'+(p.phone||'-')+'</span></div>'+
+'<div class="settings-row"><div class="s-label">Game UID</div><span>'+(p.gameUID||'-')+'</span></div>'+
+'<div class="settings-row"><div class="s-label">Balance</div><span style="font-weight:700;color:var(--success)">₹'+(w.balance||0)+'</span></div>'+
+'<div class="settings-row"><div class="s-label">Matches</div><span>'+(s.matches||0)+'</span></div>'+
+'<div class="settings-row"><div class="s-label">Wins</div><span>'+(s.wins||0)+'</span></div>'+
+'<div class="settings-row"><div class="s-label">Earnings</div><span>₹'+(s.earnings||0)+'</span></div>'+
+'<div class="settings-row"><div class="s-label">Referral</div><span>'+(p.referralCode||'-')+'</span></div>'+
+'<div class="settings-row"><div class="s-label">Joined</div><span>'+fmtDate(p.createdAt)+'</span></div>'+
+'<div class="modal-footer">'+
+'<button class="btn btn-sm btn-info" onclick="openWalletAdjust(\''+uid+'\')"><i class="fas fa-wallet"></i>Wallet</button>'+
+'<button class="btn btn-sm '+(p.premium?'btn-secondary':'btn-primary')+'" onclick="togglePremium(\''+uid+'\','+!!p.premium+')"><i class="fas fa-crown"></i>'+(p.premium?'Remove Premium':'Make Premium')+'</button>'+
+'<button class="btn btn-sm '+(p.banned?'btn-success':'btn-danger')+'" onclick="toggleBan(\''+uid+'\','+!!p.banned+')"><i class="fas '+(p.banned?'fa-unlock':'fa-ban')+'"></i>'+(p.banned?'Unban':'Ban')+'</button></div>');
+}
+
+async function toggleBan(uid,isBanned){await db.ref('users/'+uid+'/profile/banned').set(!isBanned);logActivity(isBanned?'Unbanned user':'Banned user',uid);showToast(isBanned?'User unbanned':'User banned',isBanned?'success':'warning');closeModal()}
+async function togglePremium(uid,isPremium){await db.ref('users/'+uid+'/profile/premium').set(!isPremium);logActivity(isPremium?'Removed premium':'Added premium',uid);showToast('Updated!','success');closeModal()}
+
+function openWalletAdjust(uid){
+var u=allUsers[uid];var bal=(u&&u.wallet&&u.wallet.balance)||0;
+openModal('Adjust Wallet',
+'<p style="margin-bottom:10px;color:var(--text2)">User: <strong>'+(u&&u.profile?u.profile.name:'User')+'</strong></p>'+
+'<p style="margin-bottom:14px">Balance: <strong style="color:var(--success)">₹'+bal+'</strong></p>'+
+'<div class="form-group"><label>Action</label><select class="form-input" id="walletAction"><option value="add">Add Money</option><option value="deduct">Deduct Money</option><option value="set">Set Balance</option></select></div>'+
+'<div class="form-group"><label>Amount</label><input type="number" class="form-input" id="walletAdjustAmt" placeholder="Amount" min="0"></div>'+
+'<div class="form-group"><label>Reason</label><input type="text" class="form-input" id="walletAdjustReason" placeholder="Reason"></div>'+
+'<button class="btn btn-primary" onclick="doWalletAdjust(\''+uid+'\')" id="walletAdjustBtn">Apply</button>');
+}
+
+async function doWalletAdjust(uid){
+var action=document.getElementById('walletAction').value;
+var amt=parseInt(document.getElementById('walletAdjustAmt').value)||0;
+var reason=document.getElementById('walletAdjustReason').value||'Admin adjustment';
+if(amt<=0&&action!=='set'){showToast('Enter valid amount','warning');return}
+showLoader('walletAdjustBtn');
+try{
+var balSnap=await db.ref('users/'+uid+'/wallet/balance').once('value');
+var bal=balSnap.val()||0;
+var newBal=action==='add'?bal+amt:action==='deduct'?Math.max(bal-amt,0):amt;
+await db.ref('users/'+uid+'/wallet/balance').set(newBal);
+var txType=action==='deduct'?'admin_deduct':'admin_add';
+await db.ref('users/'+uid+'/transactions').push({type:txType,amount:amt,status:'approved',description:reason,timestamp:Date.now()});
+await db.ref('notifications/'+uid).push({title:'Wallet Updated',message:(action==='add'?'+':action==='deduct'?'-':'=')+'₹'+amt+' — '+reason,type:'payment',read:false,timestamp:Date.now()});
+logActivity('Wallet '+action,uid+': ₹'+amt);
+showToast('Wallet updated!','success');closeModal();
+}catch(e){showToast(e.message,'error')}
+hideLoader('walletAdjustBtn');
+}
+
+function exportUsersCSV(){
+var csv='Name,Email,Phone,GameUID,Balance,Status,Joined\n';
+Object.entries(allUsers).forEach(function(e){var p=e[1].profile||{},w=e[1].wallet||{};csv+='"'+(p.name||'')+'","'+(p.email||'')+'","'+(p.phone||'')+'","'+(p.gameUID||'')+'",'+(w.balance||0)+','+(p.banned?'Banned':'Active')+',"'+fmtDate(p.createdAt)+'"\n'});
+downloadCSV(csv,'users_export.csv');
+}
+function downloadCSV(csv,fn){var b=new Blob([csv],{type:'text/csv'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=fn;a.click();URL.revokeObjectURL(u);showToast('Downloaded!','success')}
+
+/* ==========================================================
+   TOURNAMENTS
+   ========================================================== */
+function filterTournaments(f,el){tournamentFilter=f;if(el){el.parentElement.querySelectorAll('.tab-item').forEach(function(t){t.classList.remove('active')});el.classList.add('active')}renderTournaments()}
+
+function renderTournaments(){
+var c=document.getElementById('tournamentsGrid');
+var entries=Object.entries(allTournaments);
+if(tournamentFilter!=='all')entries=entries.filter(function(e){return e[1].status===tournamentFilter});
+entries.sort(function(a,b){return(b[1].createdAt||0)-(a[1].createdAt||0)});
+if(!entries.length){c.innerHTML=emptyState('fa-trophy','No tournaments','');return}
+c.innerHTML=entries.map(function(e){
+var id=e[0],t=e[1];var filled=t.filledSlots||0,max=t.maxSlots||100;
+var sc=t.status==='live'?'live':t.status==='completed'?'completed':t.status==='cancelled'?'cancelled':'upcoming';
+return '<div class="card-box" style="margin-bottom:12px"><div class="card-box-header"><h3><i class="fas fa-gamepad"></i>'+(t.name||'Tournament')+'</h3><span class="badge-status '+sc+'">'+(t.status||'upcoming')+'</span></div>'+
+'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;font-size:.82rem">'+
+'<div><span style="color:var(--text3)">Prize</span><div style="font-weight:700;color:var(--success)">₹'+(t.prizePool||0)+'</div></div>'+
+'<div><span style="color:var(--text3)">Fee</span><div style="font-weight:700;color:var(--warning)">'+(t.entryFee>0?'₹'+t.entryFee:'FREE')+'</div></div>'+
+'<div><span style="color:var(--text3)">Kill</span><div style="font-weight:700">₹'+(t.perKillPrize||0)+'</div></div>'+
+'<div><span style="color:var(--text3)">Slots</span><div style="font-weight:700">'+filled+'/'+max+'</div></div>'+
+'<div><span style="color:var(--text3)">Game</span><div style="font-weight:600">'+(t.game||'-')+'</div></div>'+
+'<div><span style="color:var(--text3)">Time</span><div style="font-weight:600;font-size:.73rem">'+fmtDate(t.matchTime)+'</div></div></div>'+
+'<div class="btn-group"><button class="btn btn-xs btn-primary" onclick="editTournament(\''+id+'\')"><i class="fas fa-edit"></i>Edit</button>'+
+(t.status==='upcoming'?'<button class="btn btn-xs btn-info" onclick="publishRoom(\''+id+'\')"><i class="fas fa-key"></i>Room</button>':'')+
+(t.status!=='completed'?'<button class="btn btn-xs btn-success" onclick="openResultUpload(\''+id+'\')"><i class="fas fa-upload"></i>Results</button>':'')+
+'<button class="btn btn-xs btn-warning" onclick="viewParticipants(\''+id+'\')"><i class="fas fa-users"></i>Players ('+filled+')</button>'+
+(t.status==='upcoming'?'<button class="btn btn-xs btn-danger" onclick="cancelTournament(\''+id+'\')"><i class="fas fa-times"></i>Cancel</button>':'')+
+'<button class="btn btn-xs btn-danger" onclick="deleteTournament(\''+id+'\')"><i class="fas fa-trash"></i></button></div></div>';
+}).join('');
+}
+
+function openCreateTournament(){
+openModal('Create Tournament',
+'<div class="form-row"><div class="form-group"><label>Name</label><input type="text" class="form-input" id="tName" placeholder="Solo Showdown"></div>'+
+'<div class="form-group"><label>Game</label><select class="form-input" id="tGame"><option>Free Fire</option><option>BGMI</option><option>COD Mobile</option><option>PUBG</option><option>Fortnite</option></select></div></div>'+
+'<div class="form-row"><div class="form-group"><label>Type</label><select class="form-input" id="tType"><option>Solo</option><option>Duo</option><option>Squad</option></select></div>'+
+'<div class="form-group"><label>Map</label><input type="text" class="form-input" id="tMap" placeholder="Bermuda"></div></div>'+
+'<div class="form-row"><div class="form-group"><label>Entry Fee (₹)</label><input type="number" class="form-input" id="tFee" value="0" min="0"></div>'+
+'<div class="form-group"><label>Prize Pool (₹)</label><input type="number" class="form-input" id="tPrize" value="0" min="0"></div></div>'+
+'<div class="form-row"><div class="form-group"><label>Per Kill (₹)</label><input type="number" class="form-input" id="tKill" value="0" min="0"></div>'+
+'<div class="form-group"><label>Max Slots</label><input type="number" class="form-input" id="tSlots" value="100" min="2"></div></div>'+
+'<div class="form-row"><div class="form-group"><label>Match Time</label><input type="datetime-local" class="form-input" id="tTime"></div>'+
+'<div class="form-group"><label>Visibility</label><select class="form-input" id="tVis"><option value="public">Public</option><option value="private">Private</option><option value="premium">Premium Only</option></select></div></div>'+
+'<h4 style="margin:14px 0 8px;font-size:.86rem">Prize Distribution</h4>'+
+'<div class="form-row"><div class="form-group"><label>#1 Prize</label><input type="number" class="form-input" id="tP1" value="0"></div>'+
+'<div class="form-group"><label>#2 Prize</label><input type="number" class="form-input" id="tP2" value="0"></div></div>'+
+'<div class="form-row"><div class="form-group"><label>#3 Prize</label><input type="number" class="form-input" id="tP3" value="0"></div>'+
+'<div class="form-group"><label>#4-10 each</label><input type="number" class="form-input" id="tP4" value="0"></div></div>'+
+'<button class="btn btn-primary" onclick="createTournament()" id="createTBtn"><i class="fas fa-plus"></i>Create</button>',true);
+}
+
+async function createTournament(){
+var name=document.getElementById('tName').value.trim();var timeStr=document.getElementById('tTime').value;
+if(!name||!timeStr){showToast('Fill required fields!','warning');return}
+showLoader('createTBtn');
+try{
+await db.ref('tournaments').push({
+name:name,game:document.getElementById('tGame').value,type:document.getElementById('tType').value,
+map:document.getElementById('tMap').value.trim(),entryFee:parseInt(document.getElementById('tFee').value)||0,
+prizePool:parseInt(document.getElementById('tPrize').value)||0,perKillPrize:parseInt(document.getElementById('tKill').value)||0,
+maxSlots:parseInt(document.getElementById('tSlots').value)||100,matchTime:new Date(timeStr).getTime(),
+visibility:document.getElementById('tVis').value,status:'upcoming',filledSlots:0,roomId:'',roomPassword:'',
+prizeDistribution:{1:parseInt(document.getElementById('tP1').value)||0,2:parseInt(document.getElementById('tP2').value)||0,3:parseInt(document.getElementById('tP3').value)||0,'4-10':parseInt(document.getElementById('tP4').value)||0},
+createdAt:Date.now(),createdBy:adminSession.key});
+logActivity('Created tournament',name);showToast('Tournament created!','success');closeModal();
+}catch(e){showToast(e.message,'error')}hideLoader('createTBtn');
+}
+
+function editTournament(id){
+var t=allTournaments[id];if(!t)return;
+var dt=t.matchTime?new Date(t.matchTime).toISOString().slice(0,16):'';
+openModal('Edit Tournament',
+'<div class="form-row"><div class="form-group"><label>Name</label><input type="text" class="form-input" id="etName" value="'+(t.name||'')+'"></div>'+
+'<div class="form-group"><label>Game</label><input type="text" class="form-input" id="etGame" value="'+(t.game||'')+'"></div></div>'+
+'<div class="form-row"><div class="form-group"><label>Type</label><input type="text" class="form-input" id="etType" value="'+(t.type||'')+'"></div>'+
+'<div class="form-group"><label>Map</label><input type="text" class="form-input" id="etMap" value="'+(t.map||'')+'"></div></div>'+
+'<div class="form-row"><div class="form-group"><label>Fee</label><input type="number" class="form-input" id="etFee" value="'+(t.entryFee||0)+'"></div>'+
+'<div class="form-group"><label>Prize Pool</label><input type="number" class="form-input" id="etPrize" value="'+(t.prizePool||0)+'"></div></div>'+
+'<div class="form-row"><div class="form-group"><label>Per Kill</label><input type="number" class="form-input" id="etKill" value="'+(t.perKillPrize||0)+'"></div>'+
+'<div class="form-group"><label>Max Slots</label><input type="number" class="form-input" id="etSlots" value="'+(t.maxSlots||100)+'"></div></div>'+
+'<div class="form-row"><div class="form-group"><label>Time</label><input type="datetime-local" class="form-input" id="etTime" value="'+dt+'"></div>'+
+'<div class="form-group"><label>Status</label><select class="form-input" id="etStatus"><option '+(t.status==='upcoming'?'selected':'')+'>upcoming</option><option '+(t.status==='live'?'selected':'')+'>live</option><option '+(t.status==='completed'?'selected':'')+'>completed</option></select></div></div>'+
+'<button class="btn btn-primary" onclick="saveTournament(\''+id+'\')" id="saveTBtn">Save</button>',true);
+}
+
+async function saveTournament(id){
+showLoader('saveTBtn');
+try{var ts=document.getElementById('etTime').value;
+await db.ref('tournaments/'+id).update({name:document.getElementById('etName').value.trim(),game:document.getElementById('etGame').value.trim(),type:document.getElementById('etType').value.trim(),map:document.getElementById('etMap').value.trim(),entryFee:parseInt(document.getElementById('etFee').value)||0,prizePool:parseInt(document.getElementById('etPrize').value)||0,perKillPrize:parseInt(document.getElementById('etKill').value)||0,maxSlots:parseInt(document.getElementById('etSlots').value)||100,matchTime:ts?new Date(ts).getTime():0,status:document.getElementById('etStatus').value});
+logActivity('Edited tournament',id);showToast('Updated!','success');closeModal();
+}catch(e){showToast(e.message,'error')}hideLoader('saveTBtn');
+}
+
+function publishRoom(id){
+var t=allTournaments[id];
+openModal('Publish Room',
+'<div class="form-group"><label>Room ID</label><input type="text" class="form-input" id="roomId" value="'+(t&&t.roomId||'')+'" placeholder="Room ID"></div>'+
+'<div class="form-group"><label>Room Password</label><input type="text" class="form-input" id="roomPass" value="'+(t&&t.roomPassword||'')+'" placeholder="Password"></div>'+
+'<button class="btn btn-primary" onclick="saveRoom(\''+id+'\')" id="saveRoomBtn">Publish</button>');
+}
+
+async function saveRoom(id){
+showLoader('saveRoomBtn');
+try{await db.ref('tournaments/'+id).update({roomId:document.getElementById('roomId').value.trim(),roomPassword:document.getElementById('roomPass').value.trim()});
+var t=allTournaments[id];
+if(t&&t.participants){Object.keys(t.participants).forEach(function(uid){db.ref('notifications/'+uid).push({title:'Room Published!',message:'Room details for "'+(t.name||'')+'" are now available!',type:'match',read:false,timestamp:Date.now()})})}
+logActivity('Published room',id);showToast('Room published!','success');closeModal();
+}catch(e){showToast(e.message,'error')}hideLoader('saveRoomBtn');
+}
+
+function openResultUpload(id){
+var t=allTournaments[id];if(!t)return;
+var parts=t.participants||{};var rows='',idx=0;
+Object.entries(parts).forEach(function(e){idx++;var uid=e[0],p=e[1];
+rows+='<tr><td>'+idx+'</td><td>'+(p.name||'Player')+'</td><td>'+(p.gameUID||'-')+'</td>'+
+'<td><input type="number" class="form-input" id="rank_'+uid+'" value="'+(p.rank||'')+'" style="width:60px;padding:6px" min="0"></td>'+
+'<td><input type="number" class="form-input" id="kills_'+uid+'" value="'+(p.kills||'')+'" style="width:60px;padding:6px" min="0"></td></tr>';
+});
+openModal('Upload Results — '+(t.name||''),
+'<div class="table-wrap"><table><thead><tr><th>#</th><th>Player</th><th>UID</th><th>Rank</th><th>Kills</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5">No participants</td></tr>')+'</tbody></table></div>'+
+'<div class="modal-footer"><button class="btn btn-sm btn-success" onclick="saveResults(\''+id+'\')" id="saveResultsBtn"><i class="fas fa-save"></i>Save & Distribute</button></div>',true);
+}
+
+async function saveResults(id){
+showLoader('saveResultsBtn');
+try{
+var t=allTournaments[id];var parts=t.participants||{};var pd=t.prizeDistribution||{};var killPrize=t.perKillPrize||0;var updates={};
+for(var uid in parts){
+var rankEl=document.getElementById('rank_'+uid);var killsEl=document.getElementById('kills_'+uid);
+if(!rankEl||!killsEl)continue;
+var rank=parseInt(rankEl.value)||0;var kills=parseInt(killsEl.value)||0;
+var prize=0;
+if(pd[rank])prize+=pd[rank];else if(rank>=4&&rank<=10&&pd['4-10'])prize+=pd['4-10'];
+prize+=kills*killPrize;
+updates['tournaments/'+id+'/participants/'+uid+'/rank']=rank;
+updates['tournaments/'+id+'/participants/'+uid+'/kills']=kills;
+updates['tournaments/'+id+'/participants/'+uid+'/prize']=prize;
+if(prize>0){
+var balSnap=await db.ref('users/'+uid+'/wallet/balance').once('value');
+updates['users/'+uid+'/wallet/balance']=(balSnap.val()||0)+prize;
+var txRef=db.ref('users/'+uid+'/transactions').push();
+updates['users/'+uid+'/transactions/'+txRef.key]={type:'winning',amount:prize,status:'approved',description:'Won ₹'+prize+' in "'+(t.name||'')+'" (#'+rank+', '+kills+' kills)',timestamp:Date.now()};
+var statsSnap=await db.ref('users/'+uid+'/stats').once('value');var stats=statsSnap.val()||{};
+updates['users/'+uid+'/stats/wins']=(stats.wins||0)+(rank<=3?1:0);
+updates['users/'+uid+'/stats/earnings']=(stats.earnings||0)+prize;
+var nRef=db.ref('notifications/'+uid).push();
+updates['notifications/'+uid+'/'+nRef.key]={title:'🏆 Result',message:'Rank #'+rank+' — '+kills+' kills — Won ₹'+prize+'!',type:'result',read:false,timestamp:Date.now()};
+}
+}
+updates['tournaments/'+id+'/status']='completed';
+await db.ref().update(updates);
+logActivity('Published results',id);showToast('Results saved & prizes distributed!','success');closeModal();
+}catch(e){showToast(e.message,'error')}hideLoader('saveResultsBtn');
+}
+
+function viewParticipants(id){
+var t=allTournaments[id];if(!t)return;var p=t.participants||{};var rows='',idx=0;
+Object.entries(p).forEach(function(e){idx++;var uid=e[0],pl=e[1];
+rows+='<tr><td>'+idx+'</td><td>'+(pl.name||'Player')+'</td><td>'+(pl.gameUID||'-')+'</td><td>'+(pl.rank||'-')+'</td><td>'+(pl.kills||0)+'</td><td>₹'+(pl.prize||0)+'</td>'+
+'<td><button class="btn btn-xs btn-danger" onclick="removeParticipant(\''+id+'\',\''+uid+'\')"><i class="fas fa-times"></i></button></td></tr>';
+});
+openModal('Participants — '+(t.name||''),'<div class="table-wrap"><table><thead><tr><th>#</th><th>Player</th><th>UID</th><th>Rank</th><th>Kills</th><th>Prize</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="7">No participants</td></tr>')+'</tbody></table></div>',true);
+}
+
+async function removeParticipant(tId,uid){
+if(!confirm('Remove & refund?'))return;
+var t=allTournaments[tId];var fee=t.entryFee||0;
+await db.ref('tournaments/'+tId+'/participants/'+uid).remove();
+await db.ref('tournaments/'+tId+'/filledSlots').set(Math.max((t.filledSlots||1)-1,0));
+if(fee>0){var bs=await db.ref('users/'+uid+'/wallet/balance').once('value');await db.ref('users/'+uid+'/wallet/balance').set((bs.val()||0)+fee);
+await db.ref('users/'+uid+'/transactions').push({type:'admin_add',amount:fee,status:'approved',description:'Refund: Removed from '+(t.name||''),timestamp:Date.now()})}
+logActivity('Removed participant',uid);showToast('Removed & refunded!','success');closeModal();
+}
+
+async function cancelTournament(id){
+if(!confirm('Cancel & refund all?'))return;
+var t=allTournaments[id];
+if(t.participants){for(var uid in t.participants){var fee=t.entryFee||0;
+if(fee>0){var bs=await db.ref('users/'+uid+'/wallet/balance').once('value');await db.ref('users/'+uid+'/wallet/balance').set((bs.val()||0)+fee);
+await db.ref('users/'+uid+'/transactions').push({type:'admin_add',amount:fee,status:'approved',description:'Refund: '+(t.name||'')+' cancelled',timestamp:Date.now()})}
+await db.ref('notifications/'+uid).push({title:'Tournament Cancelled',message:'"'+(t.name||'')+'" cancelled. Fee refunded.',type:'system',read:false,timestamp:Date.now()})}}
+await db.ref('tournaments/'+id+'/status').set('cancelled');
+logActivity('Cancelled tournament',id);showToast('Cancelled & refunded!','success');
+}
+
+async function deleteTournament(id){if(!confirm('DELETE permanently?'))return;await db.ref('tournaments/'+id).remove();logActivity('Deleted tournament',id);showToast('Deleted!','success')}
+
+/* ==========================================================
+   DEPOSITS
+   ========================================================== */
+function filterDeposits(f,el){depositFilter=f;if(el){el.parentElement.querySelectorAll('.tab-item').forEach(function(t){t.classList.remove('active')});el.classList.add('active')}renderDeposits()}
+
+function renderDeposits(){
+var c=document.getElementById('depositsList');
+var entries=Object.entries(allDeposits);
+if(depositFilter!=='all')entries=entries.filter(function(e){return e[1].status===depositFilter});
+entries.sort(function(a,b){return(b[1].timestamp||0)-(a[1].timestamp||0)});
+if(!entries.length){c.innerHTML=emptyState('fa-inbox','No deposits','');return}
+c.innerHTML=entries.map(function(e){var id=e[0],d=e[1];
+return '<div class="deposit-card"><div class="deposit-card-header"><div><strong>'+(d.userName||'User')+'</strong><span style="color:var(--text3);font-size:.73rem;margin-left:6px">'+((d.userId||'').substring(0,12))+'...</span></div><span class="badge-status '+d.status+'">'+d.status+'</span></div>'+
+'<div class="deposit-card-body">'+
+'<div><div class="field">Amount</div><div class="val" style="color:var(--success);font-size:1.05rem">₹'+(d.amount||0)+'</div></div>'+
+'<div><div class="field">UTR</div><div class="val" style="cursor:pointer" onclick="copyText(\''+(d.utrId||'')+'\')">'+(d.utrId||'-')+' <i class="fas fa-copy" style="font-size:.65rem;color:var(--primary)"></i></div></div>'+
+'<div><div class="field">Date</div><div class="val">'+fmtDate(d.timestamp)+'</div></div>'+
+'<div><div class="field">Screenshot</div><div class="val">'+(d.screenshot?'<img src="'+d.screenshot+'" class="img-preview" style="width:60px;height:40px;object-fit:cover" onclick="event.stopPropagation();viewImage(\''+d.screenshot+'\')">':'-')+'</div></div></div>'+
+(d.status==='pending'?'<div class="deposit-card-actions"><button class="btn btn-xs btn-success" onclick="approveDeposit(\''+id+'\')"><i class="fas fa-check"></i>Approve</button><button class="btn btn-xs btn-danger" onclick="rejectDeposit(\''+id+'\')"><i class="fas fa-times"></i>Reject</button>'+(d.screenshot?'<button class="btn btn-xs btn-info" onclick="viewImage(\''+d.screenshot+'\')"><i class="fas fa-image"></i>View</button>':'')+'</div>':'')+'</div>';
+}).join('');
+}
+
+async function approveDeposit(id){
+var d=allDeposits[id];if(!d)return;
+try{await db.ref('deposits/'+id+'/status').set('approved');
+var bs=await db.ref('users/'+d.userId+'/wallet/balance').once('value');
+await db.ref('users/'+d.userId+'/wallet/balance').set((bs.val()||0)+(d.amount||0));
+var txSnap=await db.ref('users/'+d.userId+'/transactions').orderByChild('depositId').equalTo(id).once('value');
+if(txSnap.exists()){txSnap.forEach(function(s){db.ref('users/'+d.userId+'/transactions/'+s.key+'/status').set('approved')})}
+else{await db.ref('users/'+d.userId+'/transactions').push({type:'deposit',amount:d.amount,status:'approved',description:'Deposit approved',timestamp:Date.now()})}
+await db.ref('notifications/'+d.userId).push({title:'Deposit Approved!',message:'₹'+d.amount+' added to your wallet.',type:'payment',read:false,timestamp:Date.now()});
+logActivity('Approved deposit','₹'+d.amount+' for '+(d.userName||''));
+showToast('Deposit approved & credited!','success');
+}catch(e){showToast(e.message,'error')}
+}
+function quickApproveDeposit(id){approveDeposit(id)}
+
+async function rejectDeposit(id){
+var d=allDeposits[id];if(!d)return;
+try{await db.ref('deposits/'+id+'/status').set('rejected');
+var txSnap=await db.ref('users/'+d.userId+'/transactions').orderByChild('depositId').equalTo(id).once('value');
+if(txSnap.exists()){txSnap.forEach(function(s){db.ref('users/'+d.userId+'/transactions/'+s.key+'/status').set('rejected')})}
+await db.ref('notifications/'+d.userId).push({title:'Deposit Rejected',message:'Your ₹'+d.amount+' deposit was rejected.',type:'payment',read:false,timestamp:Date.now()});
+logActivity('Rejected deposit','₹'+d.amount);showToast('Rejected!','warning');
+}catch(e){showToast(e.message,'error')}
+}
+
+/* ==========================================================
+   WITHDRAWALS
+   ========================================================== */
+function filterWithdrawals(f,el){withdrawFilter=f;if(el){el.parentElement.querySelectorAll('.tab-item').forEach(function(t){t.classList.remove('active')});el.classList.add('active')}renderWithdrawals()}
+
+function renderWithdrawals(){
+var c=document.getElementById('withdrawalsList');
+var entries=Object.entries(allWithdrawals);
+if(withdrawFilter!=='all')entries=entries.filter(function(e){return e[1].status===withdrawFilter});
+entries.sort(function(a,b){return(b[1].timestamp||0)-(a[1].timestamp||0)});
+if(!entries.length){c.innerHTML=emptyState('fa-inbox','No withdrawals','');return}
+c.innerHTML=entries.map(function(e){var id=e[0],w=e[1];
+return '<div class="deposit-card"><div class="deposit-card-header"><div><strong>'+(w.userName||'User')+'</strong></div><span class="badge-status '+w.status+'">'+w.status+'</span></div>'+
+'<div class="deposit-card-body">'+
+'<div><div class="field">Amount</div><div class="val" style="color:var(--danger);font-size:1.05rem">₹'+(w.amount||0)+'</div></div>'+
+'<div><div class="field">UPI</div><div class="val" style="cursor:pointer" onclick="copyText(\''+(w.upiId||'')+'\')">'+(w.upiId||'-')+' <i class="fas fa-copy" style="font-size:.65rem;color:var(--primary)"></i></div></div>'+
+'<div><div class="field">User</div><div class="val" style="font-size:.7rem">'+((w.userId||'').substring(0,16))+'...</div></div>'+
+'<div><div class="field">Date</div><div class="val">'+fmtDate(w.timestamp)+'</div></div></div>'+
+(w.status==='pending'?'<div class="deposit-card-actions"><button class="btn btn-xs btn-success" onclick="approveWithdrawal(\''+id+'\')"><i class="fas fa-check"></i>Approve</button><button class="btn btn-xs btn-danger" onclick="rejectWithdrawal(\''+id+'\')"><i class="fas fa-times"></i>Reject & Refund</button></div>':'')+'</div>';
+}).join('');
+}
+
+async function approveWithdrawal(id){
+var w=allWithdrawals[id];if(!w)return;
+try{await db.ref('withdrawals/'+id+'/status').set('approved');
+await db.ref('notifications/'+w.userId).push({title:'Withdrawal Approved!',message:'₹'+w.amount+' sent to '+(w.upiId||''),type:'payment',read:false,timestamp:Date.now()});
+logActivity('Approved withdrawal','₹'+w.amount+' to '+(w.upiId||''));showToast('Approved!','success');
+}catch(e){showToast(e.message,'error')}
+}
+
+async function rejectWithdrawal(id){
+var w=allWithdrawals[id];if(!w)return;
+try{await db.ref('withdrawals/'+id+'/status').set('rejected');
+var bs=await db.ref('users/'+w.userId+'/wallet/balance').once('value');
+await db.ref('users/'+w.userId+'/wallet/balance').set((bs.val()||0)+(w.amount||0));
+await db.ref('users/'+w.userId+'/transactions').push({type:'admin_add',amount:w.amount,status:'approved',description:'Withdrawal rejected — Refund',timestamp:Date.now()});
+await db.ref('notifications/'+w.userId).push({title:'Withdrawal Rejected',message:'₹'+w.amount+' refunded to wallet.',type:'payment',read:false,timestamp:Date.now()});
+logActivity('Rejected withdrawal','₹'+w.amount+' — refunded');showToast('Rejected & refunded!','warning');
+}catch(e){showToast(e.message,'error')}
+}
+
+/* ==========================================================
+   TRANSACTIONS
+   ========================================================== */
+function loadAllTransactions(){
+var tbody=document.getElementById('txTableBody');
+var allTx=[];
+Object.entries(allUsers).forEach(function(e){var uid=e[0],u=e[1];var txs=u.transactions||{};
+Object.values(txs).forEach(function(tx){allTx.push({userName:(u.profile&&u.profile.name)||'User',uid:uid,type:tx.type,amount:tx.amount,description:tx.description,status:tx.status,timestamp:tx.timestamp})})});
+allTx.sort(function(a,b){return(b.timestamp||0)-(a.timestamp||0)});
+if(!allTx.length){tbody.innerHTML='<tr><td colspan="6">'+emptyState('fa-receipt','No transactions','')+'</td></tr>';return}
+tbody.innerHTML=allTx.slice(0,200).map(function(tx){
+var isC=['deposit','winning','referral','promo','admin_add'].indexOf(tx.type)!==-1;
+return '<tr><td>'+tx.userName+'</td><td><span class="badge-status '+(isC?'active':'banned')+'">'+tx.type+'</span></td>'+
+'<td style="font-weight:700;color:'+(isC?'var(--success)':'var(--danger)')+'">'+(isC?'+':'-')+'₹'+(tx.amount||0)+'</td>'+
+'<td style="font-size:.76rem">'+(tx.description||'-')+'</td><td><span class="badge-status '+(tx.status||'approved')+'">'+(tx.status||'approved')+'</span></td>'+
+'<td style="font-size:.73rem">'+fmtDate(tx.timestamp)+'</td></tr>';
+}).join('');
+}
+function searchTransactions(){var q=(document.getElementById('txSearch').value||'').toLowerCase();document.getElementById('txTableBody').querySelectorAll('tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().indexOf(q)!==-1?'':'none'})}
+function exportTransactionsCSV(){var allTx=[];Object.entries(allUsers).forEach(function(e){var txs=e[1].transactions||{};Object.values(txs).forEach(function(tx){allTx.push({userName:(e[1].profile&&e[1].profile.name)||'User',type:tx.type,amount:tx.amount,description:tx.description,status:tx.status,timestamp:tx.timestamp})})});var csv='User,Type,Amount,Description,Status,Date\n';allTx.forEach(function(tx){csv+='"'+tx.userName+'","'+tx.type+'",'+(tx.amount||0)+',"'+(tx.description||'')+'","'+(tx.status||'')+'","'+fmtDate(tx.timestamp)+'"\n'});downloadCSV(csv,'transactions.csv')}
+
+/* ==========================================================
+   PROMOS
+   ========================================================== */
+function loadPromos(){
+var c=document.getElementById('promosList');
+db.ref('promoCodes').once('value',function(s){
+if(!s.exists()){c.innerHTML=emptyState('fa-ticket-alt','No promo codes','');return}
+var html='';
+s.forEach(function(ps){var p=ps.val(),code=ps.key;
+html+='<div class="card-box" style="margin-bottom:10px"><div class="card-box-header"><h3><i class="fas fa-ticket-alt"></i><span style="letter-spacing:2px;cursor:pointer" onclick="copyText(\''+code+'\')">'+code+'</span></h3><span class="badge-status '+(p.active?'active':'banned')+'">'+(p.active?'Active':'Inactive')+'</span></div>'+
+'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:.82rem;margin-bottom:10px">'+
+'<div><span style="color:var(--text3)">Bonus</span><div style="font-weight:700;color:var(--success)">₹'+(p.bonus||0)+'</div></div>'+
+'<div><span style="color:var(--text3)">Uses</span><div style="font-weight:700">'+(p.currentUses||0)+'/'+(p.maxUses||'∞')+'</div></div>'+
+'<div><span style="color:var(--text3)">Expires</span><div style="font-weight:600;font-size:.73rem">'+(p.expiresAt?fmtDate(p.expiresAt):'Never')+'</div></div></div>'+
+'<div class="btn-group"><button class="btn btn-xs '+(p.active?'btn-warning':'btn-success')+'" onclick="togglePromo(\''+code+'\','+p.active+')"><i class="fas '+(p.active?'fa-pause':'fa-play')+'"></i>'+(p.active?'Disable':'Enable')+'</button>'+
+'<button class="btn btn-xs btn-danger" onclick="deletePromo(\''+code+'\')"><i class="fas fa-trash"></i>Delete</button></div></div>';
+});
+c.innerHTML=html;
+});
+}
+
+function openCreatePromo(){
+openModal('Create Promo',
+'<div class="form-group"><label>Code</label><input type="text" class="form-input" id="promoCode" placeholder="BATTLEZONE50" style="text-transform:uppercase"></div>'+
+'<div class="form-row"><div class="form-group"><label>Bonus (₹)</label><input type="number" class="form-input" id="promoBonus" value="50" min="1"></div>'+
+'<div class="form-group"><label>Max Uses</label><input type="number" class="form-input" id="promoMaxUses" value="100" min="1"></div></div>'+
+'<div class="form-group"><label>Expiry</label><input type="datetime-local" class="form-input" id="promoExpiry"></div>'+
+'<button class="btn btn-primary" onclick="createPromo()" id="createPromoBtn"><i class="fas fa-plus"></i>Create</button>');
+}
+
+async function createPromo(){
+var code=(document.getElementById('promoCode').value||'').trim().toUpperCase();var bonus=parseInt(document.getElementById('promoBonus').value)||0;
+if(!code||!bonus){showToast('Fill fields!','warning');return}showLoader('createPromoBtn');
+try{var exp=document.getElementById('promoExpiry').value;
+await db.ref('promoCodes/'+code).set({bonus:bonus,maxUses:parseInt(document.getElementById('promoMaxUses').value)||100,currentUses:0,active:true,expiresAt:exp?new Date(exp).getTime():null,createdAt:Date.now()});
+logActivity('Created promo',code);showToast('Created!','success');closeModal();loadPromos();
+}catch(e){showToast(e.message,'error')}hideLoader('createPromoBtn');
+}
+async function togglePromo(code,active){await db.ref('promoCodes/'+code+'/active').set(!active);showToast('Updated!','success');loadPromos()}
+async function deletePromo(code){if(!confirm('Delete '+code+'?'))return;await db.ref('promoCodes/'+code).remove();showToast('Deleted!','success');loadPromos()}
+
+/* ==========================================================
+   REFERRALS
+   ========================================================== */
+function loadReferrals(){
+db.ref('settings/referralBonus').once('value',function(s){document.getElementById('refBonusInput').value=s.val()||10});
+var totalRefs=0,totalEarnings=0,referrers={};
+Object.entries(allUsers).forEach(function(e){var uid=e[0],u=e[1];
+if(u.referrals){var count=Object.keys(u.referrals).length;var earn=0;
+Object.values(u.referrals).forEach(function(r){earn+=(r.bonus||0)});
+totalRefs+=count;totalEarnings+=earn;referrers[uid]={name:(u.profile&&u.profile.name)||'User',count:count,earnings:earn}}});
+document.getElementById('refStats').innerHTML=
+'<div class="stat-card green"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-val">'+totalRefs+'</div><div class="stat-label">Total Referrals</div></div>'+
+'<div class="stat-card purple"><div class="stat-icon"><i class="fas fa-coins"></i></div><div class="stat-val">₹'+totalEarnings+'</div><div class="stat-label">Total Earnings</div></div>';
+var sorted=Object.entries(referrers).sort(function(a,b){return b[1].count-a[1].count}).slice(0,10);
+document.getElementById('topReferrers').innerHTML=sorted.length?sorted.map(function(e,i){return '<div class="activity-item"><div class="activity-dot '+(i<3?'orange':'blue')+'"></div><div class="activity-content"><p><strong>#'+(i+1)+'</strong> '+e[1].name+' — '+e[1].count+' referrals</p><span>Earned: ₹'+e[1].earnings+'</span></div></div>'}).join(''):emptyState('fa-users','No referrals','');
+}
+async function saveRefBonus(){var v=parseInt(document.getElementById('refBonusInput').value)||10;await db.ref('settings/referralBonus').set(v);showToast('Bonus: ₹'+v,'success');logActivity('Updated referral bonus','₹'+v)}
+
+/* ==========================================================
+   ANNOUNCEMENTS
+   ========================================================== */
+function loadAnnouncements(){
+var c=document.getElementById('announcementsList');
+db.ref('announcements').orderByChild('timestamp').once('value',function(s){
+if(!s.exists()){c.innerHTML=emptyState('fa-bullhorn','No announcements','');return}
+var arr=[];s.forEach(function(x){arr.push({id:x.key,title:x.val().title,message:x.val().message,timestamp:x.val().timestamp})});arr.reverse();
+c.innerHTML=arr.map(function(a){return '<div class="card-box" style="margin-bottom:10px;border-left:4px solid var(--warning)"><div class="card-box-header"><h3><i class="fas fa-bullhorn"></i>'+a.title+'</h3><span style="font-size:.68rem;color:var(--text3)">'+fmtDate(a.timestamp)+'</span></div><p style="font-size:.84rem;color:var(--text2);margin-bottom:10px">'+a.message+'</p><button class="btn btn-xs btn-danger" onclick="deleteAnnouncement(\''+a.id+'\')"><i class="fas fa-trash"></i>Delete</button></div>'}).join('');
+});
+}
+
+function openCreateAnnouncement(){
+openModal('Create Announcement',
+'<div class="form-group"><label>Title</label><input type="text" class="form-input" id="annTitle" placeholder="Title"></div>'+
+'<div class="form-group"><label>Message</label><textarea class="form-input" id="annMessage" placeholder="Message" rows="4"></textarea></div>'+
+'<button class="btn btn-primary" onclick="createAnnouncement()" id="createAnnBtn"><i class="fas fa-bullhorn"></i>Publish</button>');
+}
+async function createAnnouncement(){var title=document.getElementById('annTitle').value.trim(),msg=document.getElementById('annMessage').value.trim();if(!title||!msg){showToast('Fill all!','warning');return}showLoader('createAnnBtn');try{await db.ref('announcements').push({title:title,message:msg,timestamp:Date.now()});logActivity('Created announcement',title);showToast('Published!','success');closeModal();loadAnnouncements()}catch(e){showToast(e.message,'error')}hideLoader('createAnnBtn')}
+async function deleteAnnouncement(id){if(!confirm('Delete?'))return;await db.ref('announcements/'+id).remove();showToast('Deleted!','success');loadAnnouncements()}
+
+/* ==========================================================
+   PUSH NOTIFICATIONS
+   ========================================================== */
+async function sendPushNotification(){
+var title=document.getElementById('pushTitle').value.trim(),msg=document.getElementById('pushMessage').value.trim();
+var target=document.getElementById('pushTarget').value,type=document.getElementById('pushType').value;
+var userId=document.getElementById('pushUserId').value.trim();
+if(!title||!msg){showToast('Fill title & message!','warning');return}
+if(target==='specific'&&!userId){showToast('Enter user ID!','warning');return}
+showLoader('sendPushBtn');
+try{
+if(target==='all'){var uids=Object.keys(allUsers);var updates={};
+uids.forEach(function(uid){var nRef=db.ref('notifications/'+uid).push();updates['notifications/'+uid+'/'+nRef.key]={title:title,message:msg,type:type,read:false,timestamp:Date.now()}});
+await db.ref().update(updates);logActivity('Broadcast notification','"'+title+'" to '+uids.length+' users');showToast('Sent to '+uids.length+' users!','success');
+}else{await db.ref('notifications/'+userId).push({title:title,message:msg,type:type,read:false,timestamp:Date.now()});logActivity('Sent notification',userId);showToast('Sent!','success')}
+document.getElementById('pushTitle').value='';document.getElementById('pushMessage').value='';
+}catch(e){showToast(e.message,'error')}hideLoader('sendPushBtn');
+}
+
+/* ==========================================================
+   CHEAT REPORTS
+   ========================================================== */
+function filterReports(f,el){reportFilter=f;if(el){el.parentElement.querySelectorAll('.tab-item').forEach(function(t){t.classList.remove('active')});el.classList.add('active')}renderReports()}
+
+function renderReports(){
+var c=document.getElementById('reportsList');
+var entries=Object.entries(allReports);
+if(reportFilter!=='all')entries=entries.filter(function(e){return e[1].status===reportFilter});
+entries.sort(function(a,b){return(b[1].timestamp||0)-(a[1].timestamp||0)});
+if(!entries.length){c.innerHTML=emptyState('fa-flag','No reports','');return}
+c.innerHTML=entries.map(function(e){var id=e[0],r=e[1];
+return '<div class="deposit-card"><div class="deposit-card-header"><div><strong>Report by: '+(r.reporterName||'User')+'</strong></div><span class="badge-status '+r.status+'">'+r.status+'</span></div>'+
+'<div class="deposit-card-body"><div><div class="field">Player</div><div class="val">'+(r.reportedPlayerId||'-')+'</div></div>'+
+'<div><div class="field">Reason</div><div class="val" style="color:var(--danger)">'+(r.reason||'-')+'</div></div>'+
+'<div><div class="field">Match</div><div class="val">'+(r.matchId||'-')+'</div></div>'+
+'<div><div class="field">Date</div><div class="val">'+fmtDate(r.timestamp)+'</div></div></div>'+
+(r.description?'<p style="font-size:.82rem;color:var(--text2);margin-bottom:10px">'+r.description+'</p>':'')+
+(r.screenshot?'<img src="'+r.screenshot+'" class="img-preview" style="max-height:100px;margin-bottom:10px" onclick="viewImage(\''+r.screenshot+'\')">':'')+
+(r.status==='pending'?'<div class="deposit-card-actions"><button class="btn btn-xs btn-success" onclick="resolveReport(\''+id+'\')"><i class="fas fa-check"></i>Reviewed</button><button class="btn btn-xs btn-danger" onclick="banFromReport(\''+id+'\')"><i class="fas fa-ban"></i>Ban Player</button></div>':'')+'</div>';
+}).join('');
+}
+async function resolveReport(id){await db.ref('reports/'+id+'/status').set('reviewed');logActivity('Resolved report',id);showToast('Reviewed!','success')}
+async function banFromReport(id){var r=allReports[id];if(!r)return;var pid=r.reportedPlayerId;Object.entries(allUsers).forEach(function(e){var p=e[1].profile||{};if(p.gameUID===pid||(p.name&&p.name.toLowerCase()===(pid||'').toLowerCase())){db.ref('users/'+e[0]+'/profile/banned').set(true)}});await db.ref('reports/'+id+'/status').set('reviewed');logActivity('Banned from report',pid);showToast('Player banned!','warning')}
+
+/* ==========================================================
+   STAFF
+   ========================================================== */
+function loadStaff(){
+var c=document.getElementById('staffList');
+db.ref('staff').once('value',function(s){
+if(!s.exists()){c.innerHTML=emptyState('fa-user-shield','No staff','');return}
+var html='';s.forEach(function(ss){var st=ss.val(),sid=ss.key;
+html+='<div class="card-box" style="margin-bottom:10px"><div class="card-box-header"><h3><i class="fas fa-user-shield"></i>'+(st.name||'Staff')+'</h3><span class="badge-status '+(st.active?'active':'banned')+'">'+(st.active?'Active':'Inactive')+'</span></div>'+
+'<p style="font-size:.82rem;color:var(--text2);margin-bottom:6px">'+(st.email||st.staffId||'')+'</p>'+
+'<p style="font-size:.73rem;color:var(--text3)">Perms: '+((st.permissions||[]).join(', ')||'None')+'</p>'+
+'<div class="btn-group" style="margin-top:10px"><button class="btn btn-xs btn-primary" onclick="editStaff(\''+sid+'\')"><i class="fas fa-edit"></i>Edit</button><button class="btn btn-xs btn-danger" onclick="deleteStaff(\''+sid+'\')"><i class="fas fa-trash"></i>Delete</button></div></div>';
+});c.innerHTML=html;
+});
+}
+
+function openCreateStaff(){
+openModal('Add Staff',
+'<div class="form-group"><label>Name</label><input type="text" class="form-input" id="staffName" placeholder="Staff name"></div>'+
+'<div class="form-group"><label>Staff Login ID</label><input type="text" class="form-input" id="staffLoginId" placeholder="Unique staff ID"></div>'+
+'<div class="form-group"><label>Password</label><input type="password" class="form-input" id="staffPass" placeholder="Password" minlength="4"></div>'+
+'<div class="form-group"><label>Permissions</label><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px" id="staffPerms">'+
+['deposits','withdrawals','tournaments','users','reports','announcements'].map(function(p){return '<label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer"><input type="checkbox" value="'+p+'" class="staffPermCheck"> '+p+'</label>'}).join('')+'</div></div>'+
+'<button class="btn btn-primary" onclick="createStaff()" id="createStaffBtn"><i class="fas fa-plus"></i>Create</button>');
+}
+
+async function createStaff(){
+var name=document.getElementById('staffName').value.trim();
+var loginId=document.getElementById('staffLoginId').value.trim();
+var pass=document.getElementById('staffPass').value;
+var perms=[];document.querySelectorAll('.staffPermCheck:checked').forEach(function(c){perms.push(c.value)});
+if(!name||!loginId||!pass){showToast('Fill all!','warning');return}
+showLoader('createStaffBtn');
+try{
+await db.ref('staff').push({name:name,staffId:loginId,password:pass,permissions:perms,active:true,createdAt:Date.now(),createdBy:adminSession.key});
+logActivity('Created staff',name);showToast('Staff created!','success');closeModal();loadStaff();
+}catch(e){showToast(e.message,'error')}hideLoader('createStaffBtn');
+}
+
+function editStaff(sid){
+db.ref('staff/'+sid).once('value',function(s){var st=s.val();if(!st)return;
+openModal('Edit Staff',
+'<div class="form-group"><label>Name</label><input type="text" class="form-input" id="editStaffName" value="'+(st.name||'')+'"></div>'+
+'<div class="form-group"><label>Permissions</label><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+
+['deposits','withdrawals','tournaments','users','reports','announcements'].map(function(p){return '<label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer"><input type="checkbox" value="'+p+'" class="editPermCheck" '+((st.permissions||[]).indexOf(p)!==-1?'checked':'')+' > '+p+'</label>'}).join('')+'</div></div>'+
+'<div class="settings-row"><div class="s-label">Active</div><div class="toggle '+(st.active?'on':'')+'" id="editStaffActive" onclick="this.classList.toggle(\'on\')"></div></div>'+
+'<button class="btn btn-primary" onclick="saveStaffEdit(\''+sid+'\')" id="saveStaffBtn">Save</button>');
+});
+}
+async function saveStaffEdit(sid){
+var name=document.getElementById('editStaffName').value.trim();var perms=[];document.querySelectorAll('.editPermCheck:checked').forEach(function(c){perms.push(c.value)});
+var active=document.getElementById('editStaffActive').classList.contains('on');
+showLoader('saveStaffBtn');
+try{await db.ref('staff/'+sid).update({name:name,permissions:perms,active:active});logActivity('Edited staff',name);showToast('Updated!','success');closeModal();loadStaff()}catch(e){showToast(e.message,'error')}hideLoader('saveStaffBtn');
+}
+async function deleteStaff(sid){if(!confirm('Delete?'))return;await db.ref('staff/'+sid).remove();logActivity('Deleted staff',sid);showToast('Deleted!','success');loadStaff()}
+
+/* ==========================================================
+   ANALYTICS
+   ========================================================== */
+function loadAnalytics(){
+var totalUsers=Object.keys(allUsers).length;var totalDep=0,totalWith=0;
+Object.values(allDeposits).forEach(function(d){if(d.status==='approved')totalDep+=(d.amount||0)});
+Object.values(allWithdrawals).forEach(function(w){if(w.status==='approved')totalWith+=(w.amount||0)});
+var net=totalDep-totalWith;
+var activeTr=Object.values(allTournaments).filter(function(t){return t.status==='live'||t.status==='upcoming'}).length;
+document.getElementById('analyticsStats').innerHTML=
+'<div class="stat-card purple"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-val">'+totalUsers+'</div><div class="stat-label">Users</div></div>'+
+'<div class="stat-card green"><div class="stat-icon"><i class="fas fa-download"></i></div><div class="stat-val">₹'+totalDep+'</div><div class="stat-label">Deposits</div></div>'+
+'<div class="stat-card red"><div class="stat-icon"><i class="fas fa-upload"></i></div><div class="stat-val">₹'+totalWith+'</div><div class="stat-label">Withdrawals</div></div>'+
+'<div class="stat-card orange"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-val">₹'+net+'</div><div class="stat-label">Net Revenue</div></div>'+
+'<div class="stat-card blue"><div class="stat-icon"><i class="fas fa-trophy"></i></div><div class="stat-val">'+activeTr+'</div><div class="stat-label">Active Tournaments</div></div>';
+var days=[],labels=[];for(var i=6;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);d.setHours(0,0,0,0);days.push({start:d.getTime(),end:d.getTime()+86400000});labels.push(fmtShort(d.getTime()))}
+var gVals=days.map(function(day){var c=0;Object.values(allUsers).forEach(function(u){if(u.profile&&u.profile.createdAt>=day.start&&u.profile.createdAt<day.end)c++});return c});
+var maxG=Math.max.apply(null,gVals.concat([1]));
+document.getElementById('userGrowthChart').innerHTML=gVals.map(function(v){return '<div class="chart-col" style="height:'+Math.max((v/maxG)*100,5)+'%;background:var(--gradient2)"><div class="chart-tip">'+v+' users</div></div>'}).join('');
+document.getElementById('userGrowthLabels').innerHTML=labels.map(function(l){return '<span>'+l+'</span>'}).join('');
+var tS={upcoming:0,live:0,completed:0,totalP:0};Object.values(allTournaments).forEach(function(t){tS[t.status]=(tS[t.status]||0)+1;tS.totalP+=(t.filledSlots||0)});
+document.getElementById('tournamentAnalytics').innerHTML='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:.85rem"><div><span style="color:var(--text3)">Upcoming</span><div style="font-weight:700">'+tS.upcoming+'</div></div><div><span style="color:var(--text3)">Live</span><div style="font-weight:700;color:var(--danger)">'+tS.live+'</div></div><div><span style="color:var(--text3)">Completed</span><div style="font-weight:700;color:var(--success)">'+tS.completed+'</div></div><div><span style="color:var(--text3)">Participants</span><div style="font-weight:700">'+tS.totalP+'</div></div></div>';
+document.getElementById('earningsReport').innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:.9rem;text-align:center"><div><div style="font-size:1.4rem;font-weight:800;color:var(--success)">₹'+totalDep+'</div><div style="color:var(--text3);font-size:.7rem">Deposits</div></div><div><div style="font-size:1.4rem;font-weight:800;color:var(--danger)">₹'+totalWith+'</div><div style="color:var(--text3);font-size:.7rem">Withdrawals</div></div><div><div style="font-size:1.4rem;font-weight:800;color:var(--primary)">₹'+net+'</div><div style="color:var(--text3);font-size:.7rem">Net</div></div></div>';
+}
+function exportEarningsCSV(){var csv='Date,Deposits,Withdrawals,Net\n';var days=[];for(var i=29;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);d.setHours(0,0,0,0);days.push({start:d.getTime(),end:d.getTime()+86400000,label:fmtShort(d.getTime())})}days.forEach(function(day){var dep=0,wit=0;Object.values(allDeposits).forEach(function(d){if(d.status==='approved'&&d.timestamp>=day.start&&d.timestamp<day.end)dep+=(d.amount||0)});Object.values(allWithdrawals).forEach(function(w){if(w.status==='approved'&&w.timestamp>=day.start&&w.timestamp<day.end)wit+=(w.amount||0)});csv+='"'+day.label+'",'+dep+','+wit+','+(dep-wit)+'\n'});downloadCSV(csv,'earnings.csv')}
+
+/* ==========================================================
+   SETTINGS
+   ========================================================== */
+function loadSettingsData(){
+db.ref('settings').once('value',function(s){
+var st=s.val()||{};
+document.getElementById('setUpiId').value=st.upiId||'';
+document.getElementById('setUpiName').value=st.upiName||'';
+document.getElementById('setMinDeposit').value=st.minDeposit||10;
+document.getElementById('setMinWithdraw').value=st.minWithdraw||50;
+document.getElementById('setCommission').value=st.commission||5;
+document.getElementById('setAppVersion').value=st.appVersion||'1.0.0';
+document.getElementById('setUpdateMsg').value=st.updateMessage||'';
+setToggle('toggleMaintenance',st.maintenance);
+setToggle('toggleRegistration',st.registration!==false);
+setToggle('toggleAds',st.ads);
+});
+}
+function setToggle(id,val){var el=document.getElementById(id);if(!el)return;if(val)el.classList.add('on');else el.classList.remove('on')}
+async function savePaymentSettings(){showLoader('savePayBtn');try{await db.ref('settings').update({upiId:document.getElementById('setUpiId').value.trim(),upiName:document.getElementById('setUpiName').value.trim(),minDeposit:parseInt(document.getElementById('setMinDeposit').value)||10,minWithdraw:parseInt(document.getElementById('setMinWithdraw').value)||50,commission:parseInt(document.getElementById('setCommission').value)||5});logActivity('Updated payment settings');showToast('Saved!','success')}catch(e){showToast(e.message,'error')}hideLoader('savePayBtn')}
+async function saveAppSettings(){showLoader('saveAppBtn');try{await db.ref('settings').update({appVersion:document.getElementById('setAppVersion').value.trim(),updateMessage:document.getElementById('setUpdateMsg').value.trim()});logActivity('Updated app settings');showToast('Saved!','success')}catch(e){showToast(e.message,'error')}hideLoader('saveAppBtn')}
+async function toggleSetting(key,el){el.classList.toggle('on');var val=el.classList.contains('on');await db.ref('settings/'+key).set(val);logActivity('Toggled '+key,val?'ON':'OFF');showToast(key+' '+(val?'enabled':'disabled'),'success')}
+
+/* ==========================================================
+   SECURITY
+   ========================================================== */
+function loadSecurity(){
+db.ref('settings').once('value',function(s){var st=s.val()||{};
+setToggle('toggle2FA',st.force2FA);setToggle('toggleFraud',st.fraudDetection!==false);
+document.getElementById('setAutoBanStrikes').value=st.autoBanStrikes||3;
+});
+// Activity log
+var c=document.getElementById('adminActivityLog');
+db.ref('adminLogs').orderByChild('timestamp').limitToLast(20).once('value',function(s){
+if(!s.exists()){c.innerHTML=emptyState('fa-clock','No activity','');return}
+var arr=[];s.forEach(function(x){arr.push(x.val())});arr.reverse();
+c.innerHTML=arr.map(function(a){return '<div class="activity-item"><div class="activity-dot purple"></div><div class="activity-content"><p style="font-size:.82rem">'+(a.action||'')+' <span style="color:var(--text3);font-size:.68rem">'+(a.details||'')+'</span></p><span>'+fmtDate(a.timestamp)+' • '+(a.admin||'')+'</span></div></div>'}).join('');
+});
+}
+
+async function saveSecuritySetting(key,val){await db.ref('settings/'+key).set(parseInt(val)||val);showToast('Updated!','success');logActivity('Security: '+key,val)}
+
+/* ==========================================================
+   BACKUP
+   ========================================================== */
+async function exportFullData(){
+showToast('Exporting...','info');
+try{var snap=await db.ref().once('value');var data=JSON.stringify(snap.val(),null,2);
+var blob=new Blob([data],{type:'application/json'});var url=URL.createObjectURL(blob);
+var a=document.createElement('a');a.href=url;a.download='battlezone_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(url);
+logActivity('Exported backup');showToast('Downloaded!','success');
+}catch(e){showToast(e.message,'error')}
+}
+
+function showEmergencyModal(){
+openModal('⚠️ Emergency Mode',
+'<p style="color:var(--danger);font-size:.88rem;margin-bottom:16px">This enables maintenance mode and blocks all user access.</p>'+
+'<button class="btn btn-danger" onclick="emergencyShutdown()"><i class="fas fa-power-off"></i>ACTIVATE</button>'+
+'<button class="btn btn-secondary" style="margin-top:10px" onclick="closeModal()">Cancel</button>');
+}
+async function emergencyShutdown(){await db.ref('settings/maintenance').set(true);logActivity('EMERGENCY MODE');showToast('Emergency mode ON!','warning');closeModal();loadSettingsData()}
+async function cleanOldData(path){if(!confirm('Remove 30+ day old entries from '+path+'?'))return;var cutoff=Date.now()-2592000000;var snap=await db.ref(path).once('value');var count=0;snap.forEach(function(s){var ts=s.val().timestamp||0;if(ts<cutoff&&ts>0){db.ref(path+'/'+s.key).remove();count++}});logActivity('Cleaned '+path,count+' entries');showToast('Cleaned '+count+'!','success')}
+async function recalcAllWallets(){if(!confirm('Recalculate all wallets?'))return;showToast('Calculating...','info');
+Object.entries(allUsers).forEach(async function(e){var uid=e[0],u=e[1];var txs=u.transactions||{};var bal=0;
+Object.values(txs).forEach(function(tx){if(tx.status!=='approved')return;var isC=['deposit','winning','referral','promo','admin_add'].indexOf(tx.type)!==-1;if(isC)bal+=(tx.amount||0);else bal-=(tx.amount||0)});
+await db.ref('users/'+uid+'/wallet/balance').set(Math.max(bal,0))});
+logActivity('Recalculated wallets');showToast('Done!','success')}
+
+/* ==========================================================
+   START APP — CHECK SESSION
+   ========================================================== */
+window.addEventListener('load',function(){
+var t=localStorage.getItem('bz_admin_theme')||'dark';
+document.documentElement.setAttribute('data-theme',t);
+checkSession(); // Starts Firebase auth check automatically
+});
+</script>
+</body>
+</html>
